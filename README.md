@@ -4,6 +4,10 @@ A responsive HTML/CSS and vanilla JavaScript prototype for the three-business pr
 
 **This is a local prototype, not a live Shopify integration.** Every customer, payment, stock quantity, and connection status is sample data. It does not request credentials, send messages, call Shopify or Paystack, or move money. Demo changes persist in this browser's localStorage and can be reset under Connections. The demonstration is anchored to 13 September 2026.
 
+## v3: PreorderDesk reimagined
+
+A second concept lives in [`v3/`](v3/) and is published at https://boasbabs.github.io/seye-preorder-demo/v3/. It is one self-contained HTML file with sample data: nothing is sent and no money moves. It saves its state in the browser under its own key, so it does not change the demo above, and **Reset** at the bottom of its sidebar restores the sample data. [`v3/UI-VALIDATION.md`](v3/UI-VALIDATION.md) lists the Mobbin screens behind each design decision.
+
 ## Run
 
 Open `index.html` directly in a browser. No build, dependencies, or internet connection is required. For a local HTTP preview, run this from the prototype folder:
