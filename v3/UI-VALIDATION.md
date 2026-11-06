@@ -1,6 +1,6 @@
 # PreorderDesk UI validation against Mobbin
 
-Updated 4 November 2026 for v3. `index.html` is v3. It has the same flows as v2 and a clean dashboard look modelled on Mercury and Stripe. It also adds three flows: adding products, creating a batch, and adding a customer to an order. v1 and v2 are kept locally in `archive/` and are not published. v1 was invented and rejected; v2 was a Shopify admin look-alike.
+Updated 4 November 2026 for v3, and on 6 November 2026 for the Shopify sales channel. `index.html` is v3. It has the same flows as v2 and a clean dashboard look modelled on Mercury and Stripe. It also adds three flows: adding products, creating a batch, and adding a customer to an order. v1 and v2 are kept locally in `archive/` and are not published. v1 was invented and rejected; v2 was a Shopify admin look-alike.
 
 The v3 look was checked with 10 more Mobbin searches. The v2 sections further down still back the flows, which v3 keeps.
 
@@ -63,11 +63,44 @@ Not added: Stripe's collapse-to-icons rail ([Stripe](https://mobbin.com/screens/
 - Photos are shrunk before saving.
 - The new-order button stays disabled until a customer, a batch, products and a deposit of at least 70% are in, and it says what's missing.
 
+## v3: the Shopify sales channel
+
+Added 6 November 2026, after Seye decided to keep taking orders on her Shopify store and use PreorderDesk for everything after the sale. Checked with 11 more Mobbin searches.
+
+The page is a simulation. Test orders use Seye's real products and prices, taken from her public storefront, with made-up customers. "Import a Shopify export" reads a real orders CSV inside the browser. Nothing is uploaded, so customer details never reach this repository or the hosted copy.
+
+| Screen or part | What it does | References |
+|---|---|---|
+| Sidebar "Sales channels" with a Shopify row | One status line: "2 waiting for you" or "Last order 25 min ago" | Shopify admin's "Sales channels" group ([Shopify Bill Pay](https://mobbin.com/screens/ad5b3c25-50ab-41d0-ae02-0d32b898329d), [Shopify Agentic](https://mobbin.com/screens/b92eb990-7f4e-4bac-9390-d649bb2bf470)); the status line follows Mercury's Bookmarks, as for Active batches |
+| Page header: "Shopify", a green "Connected" pill, the store address | Says where orders come from and that the link is live | [Shopify Domains](https://mobbin.com/screens/30c2de43-541c-4658-b974-8246e80c67e6) ("Connected"), [Shopify Manage Bill Pay](https://mobbin.com/screens/22ceaba3-2208-48c1-9feb-afc59fac187c) ("Sync happens in real-time automatically from…") |
+| "Send a test order", the page's one blue button | Fires a pretend checkout so Seye can watch an order arrive | [Stripe Event destinations](https://mobbin.com/screens/ef9361b6-b201-4fb7-9a7e-3beaed27117b) ("simulate Stripe events") |
+| "To review" list, one button per row | Waiting orders (needs a batch, same customer?), weights, missing WhatsApp numbers, payment mismatches | [QuickBooks Bank transactions](https://mobbin.com/screens/57f6fcb6-ee5e-4598-b0be-603e31ff9b6d) ("Pending", Match and Categorise per row), [YNAB](https://mobbin.com/screens/3a34e509-965a-44cc-97cf-12ebd76adf78) ("30 new transactions to approve or categorize"), [Deel Action required](https://mobbin.com/screens/b6d82ee0-8694-4f55-a1d5-9f0964c8b13c) |
+| "Orders from Shopify" table with "Matched by phone", "New customer" | Shows how each order was matched | [Mercury Transactions](https://mobbin.com/screens/b5b9a184-bd88-48e7-ba5a-f3f151278cc2) ("Each transaction shows if it was set automatically, by a rule, or by you") |
+| Order drawer, "What PreorderDesk did" | Received, customer, products, batch, payment, added, each with a check or an amber alert | [incident.io workflow run](https://mobbin.com/screens/30db1df5-f778-44ad-8d87-8419e07c262d) ("Steps", "Succeeded"), [Gumloop Flow Run](https://mobbin.com/screens/1ddd873b-8113-4da3-9f53-2373318e9dd5) |
+| "Same customer?" | Shopify's details beside PreorderDesk's; "Same person" or "Different people" | [Calendly Merge contacts](https://mobbin.com/screens/9b1906d3-3035-4a74-a7ff-c72606a8bde5) (two records side by side), [Klaviyo Merge profile](https://mobbin.com/screens/c140e960-f3d9-4a5a-a747-c9c0719a522d) ("if they represent the same person") |
+| "Choose a batch" | Radio list of open batches | The delivery-method choice already in v3 (Zara, Fresha) |
+| "Add weights" | One weight box per product, in a table | [Shopify variant table](https://mobbin.com/screens/f55bb8ee-e905-422d-aa3b-92f0492e0121) (editable cells), [Shopify bulk editor](https://mobbin.com/screens/dd9d269b-51c0-4c4a-a015-64f8be20c273) |
+| "Import a Shopify export" | Numbered steps, a drop area, then a summary before anything is added | [Quo Upload a CSV file](https://mobbin.com/screens/a612f7f1-5229-4f1d-a2d2-625f5bee3636), [Sprig Upload CSV](https://mobbin.com/screens/1bad4df1-4b3a-4c2a-9423-9f1559a5891f), [Square Import customers](https://mobbin.com/screens/53f8ac0c-b1d5-46dc-b9c7-050dcb6a18cb), [Unify Review](https://mobbin.com/screens/1cf37020-4be4-47c3-a469-d1d32bdd202d) ("Up to 24 companies will be uploaded"), [Square import summary](https://mobbin.com/screens/a13e0b6c-1806-4f5c-a390-956c0fe93ad5) |
+| A file that isn't a Shopify orders export | "Missing columns: …" under the drop area | [Buffer Import Your Posts](https://mobbin.com/screens/32d4f39d-b5cd-438a-96a7-cff322196c12) ("Invalid CSV file. Missing columns") |
+| Phone: "Sales channels" row at the bottom of Home | The sidebar is hidden on phones, so Home links to the page | [Shopify iOS home](https://mobbin.com/screens/fc78e9ee-0629-4e84-a80d-89090a648363) (list rows with chevrons) |
+| Activity list, side details | Timeline and facts columns already in v3 | Stripe payment page (linked above) |
+
+**What changed elsewhere.**
+- Orders from Shopify keep Shopify's order number, show ", Shopify" under the date, and have a Shopify section in Details with "How it came in".
+- Shopify's order discount shows as its own line, so a 1% website discount doesn't leave a fake balance.
+- Payments from Shopify are labelled "Paid at checkout" or "Marked as paid in Shopify" instead of "Deposit".
+- Products from Shopify show "From Shopify". Their name, variant and price can't be edited here, and a missing weight shows as "Weight needed".
+- The freight cost can't be added while any product in the batch has no weight.
+- Handing over a Shopify order logs that it was marked fulfilled in Shopify without Shopify emailing the customer.
+- Customers can have no WhatsApp number and no location ("Not added", "Location not given"), because staff-created Shopify orders sometimes have neither.
+
 ## v3: still not backed by a direct reference
 
 1. The duplicate-number warning with "Use Amaka". It's a common pattern, but I didn't find it on Mobbin.
 2. The spare-units stepper in the batch editor. Fresha uses a quantity field; the stepper is my substitution.
 3. Apple's system font and its blue (#0071E3). This is a look chosen for the Steve Jobs brief. Mercury's primary blue plays the same role.
+4. In "Add weights", typing a weight copies it to the other variants of the same product. It saves typing for colour variants; I didn't find this exact behaviour.
+5. Product fields that come from Shopify shown as disabled inputs with "Change it in Shopify". The idea of fields owned by another system is common; I didn't search for a screen of it.
 
 ---
 

@@ -450,6 +450,29 @@ body.public #app{display:none}
 #toast button{background:none;border:0;color:#fff;padding:2px;display:grid;opacity:.7}
 #toast .ic{width:16px;height:16px}
 
+/* Shopify sales channel (Shopify Bill Pay "Sync and import", QuickBooks "For review", incident.io run steps) */
+.todo .row{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 0}
+.steps{list-style:none;margin:4px 0 0;padding:0}
+.steps li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;padding:12px 0;border-bottom:1px solid var(--line-2)}
+.steps li:last-child{border-bottom:0}
+.steps .si{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--green-soft);color:var(--green)}
+.steps .si.amber{background:var(--amber-soft);color:var(--amber)}
+.steps .si .ic{width:15px;height:15px;stroke-width:2.2}
+.steps strong{display:block;font-weight:500}
+.steps p{color:var(--ink-2);font-size:13px}
+.m-b h3{font-size:15px;font-weight:600;margin:22px 0 4px}
+.drop{display:flex;flex-direction:column;align-items:center;gap:4px;padding:28px 16px;margin:4px 0 12px;border:1.5px dashed #cfcfd4;border-radius:14px;background:#fff;color:var(--ink-2);text-align:center;cursor:pointer}
+.drop:hover,.drop.over{background:var(--blue-soft);border-color:var(--blue)}
+.drop .ic{width:24px;height:24px;color:var(--blue)}
+.drop strong{color:var(--blue);font-weight:500}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0 4px}
+.cmp>div{padding:14px 16px;border-radius:12px;background:var(--fill)}
+.cmp .label{margin-bottom:6px}
+.tbl .clip{max-width:230px;overflow:hidden;text-overflow:ellipsis}
+.picklist .input-post input{flex:1;min-width:0;width:auto;height:38px;border:0;outline:none;background:none;padding:0 6px 0 12px;font-size:14px}
+.field input:disabled{background:var(--fill);color:var(--ink-2)}
+.phone-only{display:none}
+
 /* Floating tab bar on phones (Cash App, Shopify iOS) */
 .tabbar{display:none}
 
@@ -504,6 +527,10 @@ body.public #app{display:none}
   .top-right .btn span.t{display:none}
   .ed-bar [data-act="toggle-preview"]{display:none}
   .ed-body.with-preview .ed-preview{display:block}
+  .phone-only{display:block}
+  .cmp{grid-template-columns:1fr}
+  .todo .row{grid-template-columns:36px minmax(0,1fr)}
+  .todo .row .btn{grid-column:2;justify-self:start}
 }
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -599,7 +626,7 @@ const PI = {
   bag: '<path d="M5.5 8.5h13l-1 11.5h-11z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/>',
   box: '<path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/>',
 };
-const thumb = (p, size = '') => p && p.image ? `<img class="thumb ${size}" src="${p.image}" alt="">` : `<span class="thumb ${size}"><svg viewBox="0 0 24 24" aria-hidden="true">${PI[(p && p.icon) || 'box'] || PI.box}</svg></span>`;
+const thumb = (p, size = '') => p && p.image ? `<img class="thumb ${size}" src="${esc(p.image)}" alt="" loading="lazy">` :`<span class="thumb ${size}"><svg viewBox="0 0 24 24" aria-hidden="true">${PI[(p && p.icon) || 'box'] || PI.box}</svg></span>`;
 const pill = (label, tone = '', icon) => `<span class="pill ${tone}">${icon ? ic(icon) : ''}${esc(label)}</span>`;
 const av = (name, size = '') => `<span class="av ${size}">${esc(initials(name || '')) || ic('customers')}</span>`;
 
@@ -707,7 +734,7 @@ const custById = id => S.customers.find(c => c.id === id);
 const custOf = o => custById(o.customerId);
 const ordersIn = b => S.orders.filter(o => o.items.some(i => i.batchId === b.id));
 const openBatches = () => S.batches.filter(b => b.status === 'open').sort((a, b) => toMs(a.closesOn) - toMs(b.closesOn));
-const placeOf = area => { const a = AREAS[area]; if (!a) return area; return (a[0] === area || a[0] === 'Rivers') ? area : `${area}, ${a[0]}`; };
+const placeOf = area => { if (!area) return 'Location not given'; const a = AREAS[area]; if (!a) return area;return (a[0] === area || a[0] === 'Rivers') ? area : `${area}, ${a[0]}`; };
 const feeFor = area => (AREAS[area] || [null, 7500])[1];
 const statusUrl = id => location.origin + location.pathname + '#status/' + id;
 const batchKg = b => sum(ordersIn(b).flatMap(o => o.items.filter(i => i.batchId === b.id).map(i => P(i.sku).kg * i.qty))) + (b.spareKg || 0);
@@ -739,10 +766,11 @@ function calc(o) {
     return { ...it, b, p, here, kg, ship };
   });
   const goods = sum(items.map(i => i.price * i.qty));
+  const discount = o.discount || 0;
   const shipKnown = items.every(i => i.ship !== null);
   const ship = sum(items.map(i => i.ship || 0));
   const delivery = o.delivery ? o.delivery.fee : 0;
-  const total = goods + ship + delivery;
+  const total = goods - discount + ship + delivery;
   const paid = sum(o.payments.map(p => p.amount));
   const owed = total - paid;
   const final = shipKnown && !!o.delivery;
@@ -771,17 +799,23 @@ function calc(o) {
   else if (items.some(i => i.handedOver)) ful = ['Partially fulfilled', 'amber'];
   else if (fulfillable.length) ful = ['Ready to fulfill', 'amber'];
   else ful = ['On hold', ''];
-  return { items, goods, ship, shipKnown, delivery, total, paid, owed, final, claim, remaining, missing, reasons, ready, fulfillable, held, delivered, pay, ful };
+  return { items, goods, discount, ship, shipKnown, delivery, total, paid, owed, final, claim, remaining, missing, reasons, ready, fulfillable, held, delivered, pay, ful };
 }
 const payPill = c => pill(...c.pay);
 const fulPill = c => pill(...c.ful);
 const itemCount = o => sum(o.items.map(i => i.qty));
+const waLine = cu => cu.phone ? `${esc(cu.phone)} on WhatsApp` : 'No WhatsApp number yet';
+const channelText = o => !o.shopify ? `on ${o.channel}` : o.shopify.source === 'web' ? 'on the website' : 'by staff in Shopify';
 
 /* ---------- To do (Jobber "To do", Etsy "Top tasks") ---------- */
 function todos() {
   const T = [];
   const all = S.orders.map(o => ({ o, c: calc(o), cu: custOf(o) }));
   all.filter(x => x.c.claim).forEach(({ o, c, cu }) => T.push({ icon: 'money', tone: 'amber', href: `#order/${o.id}`, title: `Confirm ${esc(cu.name)}’s ${naira(c.claim.amount)} transfer`, sub: `${c.claim.method}, reference ${esc(c.claim.ref)}. Sent ${ago(c.claim.date)}.` }));
+  const waiting = shopWaiting();
+  if (waiting.length) T.push({ icon: 'store', tone: 'amber', href: '#shopify', title: waiting.length === 1 ? `Shopify order #${waiting[0].no} is waiting for you` : `${waiting.length} Shopify orders are waiting for you`, sub: `${andList(waiting.map(e => `#${e.no} ${e.hold.kind === 'batch' ? 'needs a batch' : 'needs a customer check'}`))}. They’re added once you decide.` });
+  const noKg = kgNeeded();
+  if (noKg.length) T.push({ icon: 'box', tone: 'amber', href: '#shopify', title: `Add weights for ${plural(noKg.length, 'product')} from Shopify`, sub: 'Needed before a batch’s freight cost can be split by weight.' });
   const ready = all.filter(x => x.c.ready);
   if (ready.length) T.push({ icon: 'box', tone: 'green', href: '#orders?tab=ready', title: `${plural(ready.length, 'order')} ready to fulfill`, sub: andList(ready.map(x => esc(x.cu.name))) });
   S.batches.filter(b => b.status === 'received' && b.ratePerKg == null).forEach(b => T.push({ icon: 'money', tone: 'amber', href: `#batch/${b.id}`, title: `Add freight cost for the ${b.name}`, sub: `Received ${ago(b.receivedOn)}. ${plural(ordersIn(b).length, 'customer')} are waiting for their final balance.` }));
@@ -832,6 +866,10 @@ function homePage() {
       ${T.length ? `<ul class="todo">${T.map(t => `<li><a href="${t.href}"><span class="ti ${t.tone}">${ic(t.icon)}</span><span><strong>${t.title}</strong><small>${t.sub}</small></span><span class="chev">${ic('chevR')}</span></a></li>`).join('')}</ul>`
         : `<div class="empty">${ic('done')}<strong>Nice! There’s nothing you need to do right now.</strong>New tasks appear here when a batch arrives or a customer pays.</div>`}
     </section>
+    <section class="sec phone-only">
+      <div class="sec-h"><h2>Sales channels</h2></div>
+      <ul class="todo"><li><a href="#shopify"><span class="ti">${ic('store')}</span><span><strong>Shopify</strong><small>${shopNote()}</small></span><span class="chev">${ic('chevR')}</span></a></li></ul>
+    </section>
   </div>`;
 }
 
@@ -866,7 +904,7 @@ function ordersPage(tab) {
 }
 function orderTable(rows) {
   return `<div class="tbl-wrap listify"><table class="tbl"><thead><tr><th>Order</th><th>Customer</th><th>Batch</th><th>Payment</th><th>Fulfillment</th><th class="r">Total</th></tr></thead><tbody>
-    ${rows.map(({ o, c, cu }) => `<tr data-href="#order/${o.id}"><td><a class="strong" href="#order/${o.id}" style="color:inherit">#${o.id}</a><small>${fmt(o.created)}</small></td><td><span class="who">${av(cu.name)}<span>${esc(cu.name)}</span></span></td><td class="muted">${esc(batchNames(o))}</td><td>${payPill(c)}</td><td>${fulPill(c)}</td><td class="r">${naira(c.total)}</td></tr>`).join('')}
+    ${rows.map(({ o, c, cu }) => `<tr data-href="#order/${o.id}"><td><a class="strong" href="#order/${o.id}" style="color:inherit">#${o.id}</a><small>${fmt(o.created)}${o.shopify ? ', Shopify' : ''}</small></td><td><span class="who">${av(cu.name)}<span>${esc(cu.name)}</span></span></td><td class="muted">${esc(batchNames(o))}</td><td>${payPill(c)}</td><td>${fulPill(c)}</td><td class="r">${naira(c.total)}</td></tr>`).join('')}
   </tbody></table></div>
   <ul class="rowlist">${rows.map(({ o, c, cu }) => `<li><a href="#order/${o.id}">${av(cu.name, 'md')}<span><strong>${esc(cu.name)}</strong><small>#${o.id}, ${fmt(o.created)}</small></span><span class="r"><span class="num">${naira(c.total)}</span>${c.claim ? payPill(c) : c.fulfillable.length || c.delivered ? fulPill(c) : payPill(c)}</span></a></li>`).join('')}</ul>`;
 }
@@ -917,7 +955,7 @@ function orderPage(id) {
       <div>
         <p class="eyebrow">Order #${o.id}</p>
         <h1 class="money-h">${naira(c.total)} ${payPill(c)} ${fulPill(c)}</h1>
-        <p class="sub">For <a href="#customer/${cu.id}">${esc(cu.name)}</a>, placed ${fmtY(o.created)} on ${o.channel}</p>
+        <p class="sub">For <a href="#customer/${cu.id}">${esc(cu.name)}</a>, placed ${fmtY(o.created)} ${channelText(o)}</p>
       </div>
       <div class="acts">
         ${!c.delivered && c.owed > 0 && !c.claim ? `<button class="btn" data-act="remind" data-id="${o.id}">${ic('chat')}Send reminder</button>` : ''}
@@ -944,6 +982,7 @@ function orderPage(id) {
           <div class="sec-h"><h2>Payment</h2>${!c.delivered && (c.owed > 0 || !c.final) ? `<div class="acts"><button class="btn ${primary === 'pay' ? 'primary' : ''} sm" data-act="mark-paid" data-id="${o.id}">Mark as paid</button></div>` : ''}</div>
           <div class="kv">
             <span>Subtotal<small>${plural(itemCount(o), 'item')}</small></span><span>${naira(c.goods)}</span>
+            ${c.discount ? `<span>Discount<small>From Shopify</small></span><span>${naira(-c.discount)}</span>` : ''}
             <span>Shipping<small>${shipRow[0]}</small></span><span>${shipRow[1]}</span>
             <span>Delivery<small>${delRow[0]}</small></span><span>${delRow[1]}</span>
             <span class="tot">Total${c.final ? '' : ' so far'}</span><span class="tot">${naira(c.total)}</span>
@@ -953,7 +992,7 @@ function orderPage(id) {
             <span class="tot">${c.owed < 0 ? 'Credit' : 'Balance due'}</span><span class="tot">${naira(Math.abs(c.owed))}</span>
           </div>
           <ul class="plist">
-            ${o.payments.map((p, n) => `<li><span class="d">${fmt(p.date)}</span><span>${n === 0 ? 'Deposit' : 'Payment'}<small>${p.method}${p.ref ? `, ${esc(p.ref)}` : ''}</small></span><span class="a">+${naira(p.amount)}</span></li>`).join('')}
+            ${o.payments.map((p, n) => `<li><span class="d">${fmt(p.date)}</span><span>${p.label || (n === 0 ? 'Deposit' : 'Payment')}<small>${p.method}${p.ref ? `, ${esc(p.ref)}` : ''}</small></span><span class="a">+${naira(p.amount)}</span></li>`).join('')}
             ${c.owed > 0 ? `<li><span class="d">Due</span><span>Balance<small>${c.final ? 'Before delivery' : 'When everything has arrived and the delivery method is set'}</small></span><span class="a due">${naira(c.owed)}</span></li>` : ''}
           </ul>
         </section>
@@ -962,10 +1001,11 @@ function orderPage(id) {
         <section class="sec">
           <div class="sec-h"><h2>Details</h2></div>
           <ul class="facts">
-            <li><div class="fh">Customer<button class="link" data-act="change-customer" data-id="${o.id}">Change</button></div><p><a href="#customer/${cu.id}">${esc(cu.name)}</a></p><p class="muted">${esc(cu.phone)} on WhatsApp</p><p class="muted">${esc(placeOf(cu.area))}, ${plural(custOrders, 'order')}</p></li>
+            <li><div class="fh">Customer<button class="link" data-act="change-customer" data-id="${o.id}">Change</button></div><p><a href="#customer/${cu.id}">${esc(cu.name)}</a></p><p class="muted">${waLine(cu)}${cu.phone ? '' : ` <button class="link" data-act="edit-customer" data-id="${cu.id}">Add</button>`}</p>${cu.email ? `<p class="muted">${esc(cu.email)}</p>` : ''}<p class="muted">${esc(placeOf(cu.area))}, ${plural(custOrders, 'order')}</p></li>
             <li><div class="fh">Delivery method${!c.delivered ? `<button class="link" data-act="delivery" data-id="${o.id}">${o.delivery ? 'Edit' : 'Choose'}</button>` : ''}</div>${!o.delivery ? '<p class="muted">Not chosen yet. The customer can choose on their order page.</p>' : pickup ? `<p>Pickup at ${STORE.hub}</p><p class="muted">Free</p>` : `<p>Delivery to ${esc(placeOf(cu.area))}</p><p class="muted">${naira(o.delivery.fee)}</p>`}</li>
             <li><div class="fh">${batches.length > 1 ? 'Batches' : 'Batch'}</div>${batches.map(b => `<p><a href="#batch/${b.id}">${esc(b.name)}</a> ${batchPill(b)}</p><p class="muted" style="margin-bottom:6px">${esc(b.from)} to Lagos, ${batchWhen(b)}</p>`).join('')}</li>
-            <li><div class="fh">Sales channel</div><p>${o.channel}</p></li>
+            ${o.shopify ? `<li><div class="fh">Shopify</div><p>${o.shopify.sid ? `<a href="${shopAdminUrl(o.shopify.sid)}" target="_blank" rel="noopener">Order #${o.shopify.no} in Shopify</a>` : `Order #${o.shopify.no}`}</p><p class="muted">${o.shopify.source === 'web' ? 'Website checkout' : 'Created by staff in Shopify'}. <button class="link" data-act="shop-open" data-no="${o.shopify.no}">How it came in</button></p></li>`
+              : `<li><div class="fh">Sales channel</div><p>${o.channel}</p></li>`}
             <li><div class="fh">Customer’s order page</div><p><a href="#status/${o.id}" target="_blank" rel="noopener">View</a> <span class="faint">or</span> <button class="link" data-act="copy-status" data-id="${o.id}">copy link</button></p></li>
           </ul>
         </section>
@@ -1033,7 +1073,7 @@ function batchPage(id) {
         <section class="sec">
           <div class="sec-h"><h2>Products <span class="n">${skus.length}</span></h2>${b.status === 'open' ? `<div class="acts"><button class="btn sm" data-act="batch-products" data-id="${b.id}">${ic('plus')}Add products</button></div>` : ''}</div>
           <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Product</th><th class="r">Price</th><th class="r">Preordered</th><th class="r">Weight</th><th class="r">${got ? 'Received' : 'Arrives'}</th></tr></thead><tbody>
-            ${skus.map(k => { const p = P(k), q = forOrders[k] || 0; return `<tr><td><span class="who">${thumb(p, 'sm')}<span><span class="strong">${esc(p.name)}</span><small>${esc(p.variant || '')}</small></span></span></td><td class="r">${naira(p.price)}</td><td class="r">${q}</td><td class="r">${p.kg * q} kg</td><td class="r">${got ? `${q} of ${q}` : '<span class="faint">' + (b.eta ? fmt(b.eta) : 'Not set') + '</span>'}</td></tr>`; }).join('')}
+            ${skus.map(k => { const p = P(k), q = forOrders[k] || 0; return `<tr><td><span class="who">${thumb(p, 'sm')}<span><span class="strong">${esc(p.name)}</span><small>${esc(p.variant || '')}</small></span></span></td><td class="r">${naira(p.price)}</td><td class="r">${q}</td><td class="r">${p.kg == null ? pill('Weight needed', 'amber') : `${p.kg * q} kg`}</td><td class="r">${got ? `${q} of ${q}` : '<span class="faint">' + (b.eta ? fmt(b.eta) : 'Not set') + '</span>'}</td></tr>`; }).join('')}
             ${b.spareUnits ? `<tr><td class="muted">Spare stock to sell</td><td></td><td class="r">${b.spareUnits}</td><td class="r">${b.spareKg} kg</td><td class="r">${got ? `${b.spareUnits} of ${b.spareUnits}` : ''}</td></tr>` : ''}
           </tbody></table></div>
         </section>
@@ -1075,9 +1115,9 @@ function productsPage() {
   return `<div class="page">
     <div class="ph"><div><h1>Products</h1><p class="sub">What you sell. Weight is used to split each batch’s freight cost.</p></div><div class="acts"><button class="btn primary" data-act="add-product">${ic('plus')}Add product</button></div></div>
     <div class="tbl-wrap listify"><table class="tbl"><thead><tr><th>Product</th><th class="r">Price</th><th class="r">Supplier cost</th><th class="r">Weight</th><th>Taking orders in</th><th class="r">Preordered</th></tr></thead><tbody>
-      ${list.map(p => { const m = p.cost ? Math.round((p.price - p.cost) / p.price * 100) : null; const ib = inBatches(p.id); return `<tr data-act="edit-product" data-id="${p.id}" style="cursor:pointer"><td><span class="who">${thumb(p)}<span><span class="strong">${esc(p.name)}</span><small>${esc(p.variant || '')}</small></span></span></td><td class="r">${naira(p.price)}</td><td class="r">${p.cost ? `${naira(p.cost)}<small>${m}% margin</small>` : '<span class="faint">Not set</span>'}</td><td class="r">${p.kg} kg</td><td>${ib.length ? esc(ib.join(', ')) : '<span class="faint">No open batch</span>'}</td><td class="r">${pre(p.id)}</td></tr>`; }).join('')}
+      ${list.map(p => { const m = p.cost ? Math.round((p.price - p.cost) / p.price * 100) : null; const ib = inBatches(p.id); return `<tr data-act="edit-product" data-id="${p.id}" style="cursor:pointer"><td><span class="who">${thumb(p)}<span><span class="strong">${esc(p.name)}</span><small>${[esc(p.variant || ''), p.shopify ? 'From Shopify' : ''].filter(Boolean).join(', ')}</small></span></span></td><td class="r">${naira(p.price)}</td><td class="r">${p.cost ? `${naira(p.cost)}<small>${m}% margin</small>` : '<span class="faint">Not set</span>'}</td><td class="r">${p.kg == null ? pill('Weight needed', 'amber') : `${p.kg} kg`}</td><td>${ib.length ? esc(ib.join(', ')) : '<span class="faint">No open batch</span>'}</td><td class="r">${pre(p.id)}</td></tr>`; }).join('')}
     </tbody></table></div>
-    <ul class="rowlist">${list.map(p => `<li><a href="#products" data-act="edit-product" data-id="${p.id}">${thumb(p)}<span><strong>${esc(p.name)}</strong><small>${p.variant ? esc(p.variant) + ', ' : ''}${p.kg} kg</small></span><span class="r"><span class="num">${naira(p.price)}</span><small class="muted">${pre(p.id)} preordered</small></span></a></li>`).join('')}</ul>
+    <ul class="rowlist">${list.map(p => `<li><a href="#products" data-act="edit-product" data-id="${p.id}">${thumb(p)}<span><strong>${esc(p.name)}</strong><small>${p.variant ? esc(p.variant) + ', ' : ''}${p.kg == null ? 'weight needed' : `${p.kg} kg`}</small></span><span class="r"><span class="num">${naira(p.price)}</span><small class="muted">${pre(p.id)} preordered</small></span></a></li>`).join('')}</ul>
   </div>`;
 }
 
@@ -1090,7 +1130,7 @@ function customersPage() {
   return `<div class="page">
     <div class="ph"><h1>Customers</h1><div class="acts"><button class="btn primary" data-act="add-customer">${ic('plus')}Add customer</button></div></div>
     <div class="tbl-wrap listify"><table class="tbl"><thead><tr><th>Customer</th><th>WhatsApp</th><th>Location</th><th class="r">Orders</th><th class="r">Paid</th><th class="r">Balance due</th></tr></thead><tbody>
-      ${rows.map(r => `<tr data-href="#customer/${r.cu.id}"><td><span class="who">${av(r.cu.name)}<a class="strong" href="#customer/${r.cu.id}" style="color:inherit">${esc(r.cu.name)}</a></span></td><td class="muted">${esc(r.cu.phone)}</td><td class="muted">${esc(placeOf(r.cu.area))}</td><td class="r">${r.os.length}</td><td class="r green">${naira(r.spent)}</td><td class="r">${r.due ? naira(r.due) : '<span class="faint">₦0</span>'}</td></tr>`).join('')}
+      ${rows.map(r => `<tr data-href="#customer/${r.cu.id}"><td><span class="who">${av(r.cu.name)}<a class="strong" href="#customer/${r.cu.id}" style="color:inherit">${esc(r.cu.name)}</a></span></td><td class="muted">${r.cu.phone ? esc(r.cu.phone) : '<span class="faint">Not added</span>'}</td><td class="muted">${esc(placeOf(r.cu.area))}</td><td class="r">${r.os.length}</td><td class="r green">${naira(r.spent)}</td><td class="r">${r.due ? naira(r.due) : '<span class="faint">₦0</span>'}</td></tr>`).join('')}
     </tbody></table></div>
     <ul class="rowlist">${rows.map(r => `<li><a href="#customer/${r.cu.id}">${av(r.cu.name, 'md')}<span><strong>${esc(r.cu.name)}</strong><small>${esc(placeOf(r.cu.area))}, ${plural(r.os.length, 'order')}</small></span><span class="r"><span class="num">${r.due ? naira(r.due) : ''}</span>${r.due ? '<small class="muted">due</small>' : ''}</span></a></li>`).join('')}</ul>
   </div>`;
@@ -1122,7 +1162,8 @@ function customerPage(id) {
       <aside class="d-side">
         <section class="sec"><div class="sec-h"><h2>Details</h2><button class="link" data-act="edit-customer" data-id="${cu.id}">Edit</button></div>
           <ul class="facts">
-            <li><div class="fh">WhatsApp</div><p>${esc(cu.phone)}</p></li>
+            <li><div class="fh">WhatsApp</div><p>${cu.phone ? esc(cu.phone) : '<span class="faint">Not added</span>'}</p></li>
+            ${cu.email ? `<li><div class="fh">Email</div><p>${esc(cu.email)}</p></li>` : ''}
             <li><div class="fh">Location</div><p>${esc(placeOf(cu.area))}</p><p class="muted">Delivery ${naira(feeFor(cu.area))}, pickup free</p></li>
             <li><div class="fh">Instagram</div><p>${cu.instagram ? '@' + esc(cu.instagram) : '<span class="faint">Not added</span>'}</p></li>
           </ul></section>
@@ -1304,7 +1345,7 @@ function drawBELines() {
   const keys = Object.keys(bd.lines), box = $('#be-lines');
   if (!keys.length) { box.innerHTML = '<div class="be-empty">No products yet. Add the products you’re offering in this batch.</div>'; return; }
   box.innerHTML = `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Product</th><th class="r">Price</th><th class="r">Supplier cost</th><th>Spare units</th><th></th></tr></thead><tbody>
-    ${keys.map(k => { const p = P(k), sp = bd.lines[k].spare; return `<tr><td><span class="who">${thumb(p, 'sm')}<span><span class="strong">${esc(p.name)}</span><small>${p.variant ? esc(p.variant) + ', ' : ''}${p.kg} kg</small></span></span></td><td class="r">${naira(p.price)}</td><td class="r">${p.cost ? naira(p.cost) : '<span class="faint">Not set</span>'}</td>
+    ${keys.map(k => { const p = P(k), sp = bd.lines[k].spare; return `<tr><td><span class="who">${thumb(p, 'sm')}<span><span class="strong">${esc(p.name)}</span><small>${p.variant ? esc(p.variant) + ', ' : ''}${p.kg == null ? 'weight needed' : `${p.kg} kg`}</small></span></span></td><td class="r">${naira(p.price)}</td><td class="r">${p.cost ? naira(p.cost) : '<span class="faint">Not set</span>'}</td>
       <td><span class="stepper"><button type="button" data-act="be-dec" data-id="${k}" aria-label="One fewer spare ${esc(p.name)}">${ic('minus')}</button><span>${sp}</span><button type="button" data-act="be-inc" data-id="${k}" aria-label="One more spare ${esc(p.name)}">${ic('plus')}</button></span></td>
       <td class="r"><button type="button" class="icon-btn" data-act="be-drop" data-id="${k}" aria-label="Remove ${esc(p.name)}">${ic('x')}</button></td></tr>`; }).join('')}
   </tbody></table></div>`;
@@ -1375,7 +1416,7 @@ function statusBody(o, { preview = false } = {}) {
         <button class="btn primary lg full" id="pub-save" data-id="${o.id}" disabled>Continue</button></div>`
     : o.delivery ? `<div class="pcard" style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><span><span class="label">Delivery method</span><p style="font-weight:600;margin-top:2px">${pickup ? `Pickup at ${STORE.hub}` : `Delivery to ${esc(placeOf(cu.area))}`}</p></span>${!c.ready && !c.items.some(i => i.handedOver) ? `<button class="link" data-act="pub-change" data-id="${o.id}">Change</button>` : ''}</div>` : '';
   const ev = [{ date: o.created, text: 'Order confirmed' }];
-  o.payments.forEach((p, n) => ev.push({ date: p.date, text: `${n === 0 ? 'Deposit' : 'Payment'} of ${naira(p.amount)} received` }));
+  o.payments.forEach((p, n) => ev.push({ date: p.date, text: `${n === 0 && !p.label ? 'Deposit' : 'Payment'} of ${naira(p.amount)} received` }));
   bs.forEach(b => { if (b.shippedOn) ev.push({ date: b.shippedOn, text: `Shipped from ${b.from}` }); if (b.receivedOn) ev.push({ date: b.receivedOn, text: bs.length > 1 ? `${andList(o.items.filter(i => i.batchId === b.id).map(i => P(i.sku).name))} arrived in Lagos` : 'Arrived in Lagos' }); });
   if (o.deliveredOn) ev.push({ date: o.deliveredOn, text: pickup ? 'Picked up' : 'Delivered' });
   ev.sort((a, b) => toMs(b.date) - toMs(a.date));
@@ -1390,6 +1431,7 @@ function statusBody(o, { preview = false } = {}) {
     <div class="pcard"><h3>Order summary</h3>${c.items.map(i => `<div class="pline">${thumb(i.p)}<div><div class="ln">${esc(i.p.name)}${i.qty > 1 ? ` × ${i.qty}` : ''}</div><div class="ls">${esc(i.p.variant || '')}</div></div><div class="lt">${naira(i.price * i.qty)}</div></div>`).join('')}
       <div class="kv">
         <span>Subtotal</span><span>${naira(c.goods)}</span>
+        ${c.discount ? `<span>Discount</span><span>${naira(-c.discount)}</span>` : ''}
         <span>Shipping</span><span>${c.items.every(i => i.shipIncluded) ? 'Included' : c.shipKnown ? naira(c.ship) : '<span class="faint">Added on arrival</span>'}</span>
         <span>Delivery</span><span>${!o.delivery ? '<span class="faint">Not chosen</span>' : pickup ? 'Free' : naira(o.delivery.fee)}</span>
         <span class="tot">Total</span><span class="tot">${naira(c.total)}</span>
@@ -1456,20 +1498,24 @@ function readImage(file) {
 function productDrawer({ id = null, name = '', batchId = null, hideBatch = false, onSave = null } = {}) {
   const p = id ? P(id) : null;
   const obs = openBatches();
-  const L = { name: p ? p.name : name, variant: p ? p.variant || '' : '', price: p ? p.price : 0, cost: p ? p.cost || 0 : 0, kg: p ? String(p.kg) : '', image: p ? p.image : null, batch: batchId || (obs[0] ? obs[0].id : '') };
+  const L = { name: p ? p.name : name, variant: p ? p.variant || '' : '', price: p ? p.price : 0, cost: p ? p.cost || 0 : 0, kg: p && p.kg != null ? String(p.kg) : '', image: p ? p.image : null, batch: batchId || (obs[0] ? obs[0].id : '') };
   const showBatch = !id && !hideBatch && obs.length;
+  /* Name, variant and price of a Shopify product come from Shopify; weight and cost are kept here */
+  const fromShop = !!(p && p.shopify), lock = fromShop ? 'disabled' : '';
+  const sibs = fromShop ? Object.values(S.products).filter(x => x.id !== id && x.shopify && x.name === p.name && x.kg == null) : [];
   openModal({
     drawer: true, title: id ? 'Edit product' : 'Add a product',
     body: () => `
       <div class="field"><span class="label" style="color:var(--ink);margin-bottom:8px">Photo</span><div class="photo-row"><span id="pd-thumb">${thumb({ image: L.image, icon: p ? p.icon : 'box' }, 'lg')}</span>
         <div><div class="acts"><label class="btn sm">${ic('upload')}${L.image ? 'Replace' : 'Upload'}<input type="file" id="pd-file" accept="image/*" hidden></label>${L.image ? '<button type="button" class="link muted" id="pd-rm">Remove</button>' : ''}</div><p class="help">JPEG or PNG. Customers see it on their order page.</p></div></div></div>
-      <div class="field"><label for="pd-name">Name <span class="req">(required)</span></label><input id="pd-name" value="${esc(L.name)}" autocomplete="off" placeholder="For example, Air fryer 6 litres"></div>
-      <div class="field"><label for="pd-var">Variant <span class="opt-l">(optional)</span></label><input id="pd-var" value="${esc(L.variant)}" autocomplete="off" placeholder="Colour, size or set"></div>
+      <div class="field"><label for="pd-name">Name <span class="req">(required)</span></label><input id="pd-name" value="${esc(L.name)}" autocomplete="off" placeholder="For example, Air fryer 6 litres" ${lock}>${fromShop ? '<p class="help">From Shopify. Change the name, variant and price in Shopify.</p>' : ''}</div>
+      <div class="field"><label for="pd-var">Variant <span class="opt-l">(optional)</span></label><input id="pd-var" value="${esc(L.variant)}" autocomplete="off" placeholder="Colour, size or set" ${lock}></div>
       <div class="grid2">
-        <div class="field"><label for="pd-price">Price <span class="req">(required)</span></label><div class="input-pre"><span>₦</span><input id="pd-price" inputmode="numeric" autocomplete="off" value="${L.price ? L.price.toLocaleString('en-NG') : ''}"></div></div>
+        <div class="field"><label for="pd-price">Price <span class="req">(required)</span></label><div class="input-pre"><span>₦</span><input id="pd-price" inputmode="numeric" autocomplete="off" value="${L.price ? L.price.toLocaleString('en-NG') : ''}" ${lock}></div></div>
         <div class="field"><label for="pd-cost">Supplier cost <span class="opt-l">(optional)</span></label><div class="input-pre"><span>₦</span><input id="pd-cost" inputmode="numeric" autocomplete="off" value="${L.cost ? L.cost.toLocaleString('en-NG') : ''}"></div><p class="help" id="pd-margin"></p></div>
       </div>
-      <div class="field"><label for="pd-kg">Weight per unit <span class="req">(required)</span></label><div class="input-post" style="max-width:200px"><input id="pd-kg" inputmode="decimal" autocomplete="off" value="${esc(L.kg)}"><span>kg</span></div><p class="help">Used to split each batch’s freight and clearing cost.</p></div>
+      <div class="field"><label for="pd-kg">Weight per unit <span class="req">(required)</span></label><div class="input-post" style="max-width:200px"><input id="pd-kg" inputmode="decimal" autocomplete="off" value="${esc(L.kg)}"><span>kg</span></div><p class="help">Used to split each batch’s freight and clearing cost.</p>
+        ${sibs.length ? `<label class="check"><input type="checkbox" id="pd-sib" checked> Use this weight for the other ${plural(sibs.length, 'variant')} of ${esc(p.name)} too</label>` : ''}</div>
       ${showBatch ? `<div class="field"><label for="pd-batch">Add to batch</label><select id="pd-batch"><option value="">Not now</option>${obs.map(b => `<option value="${b.id}" ${b.id === L.batch ? 'selected' : ''}>${esc(b.name)}, taking orders until ${fmt(b.closesOn)}</option>`).join('')}</select><p class="help">Customers can preorder it in that batch.</p></div>` : ''}
       <div class="field" style="margin-top:24px"><span class="label" style="margin-bottom:8px">What customers see</span><div class="pv-card" id="pd-pv"></div></div>`,
     foot: () => `${cancelBtn}<button class="btn primary" id="pd-go">${id ? 'Save changes' : 'Add product'}</button>`,
@@ -1498,7 +1544,9 @@ function productDrawer({ id = null, name = '', batchId = null, hideBatch = false
       go.addEventListener('click', () => {
         const kg = Number(String(L.kg).replace(',', '.'));
         let pid = id;
+        const sib = $('#pd-sib', el), sibKg = sib && sib.checked;
         commit(() => {
+          if (sibKg) sibs.forEach(x => { x.kg = kg; });
           if (id) Object.assign(S.products[id], { name: L.name.trim(), variant: L.variant.trim(), price: L.price, cost: L.cost || null, kg, image: L.image });
           else {
             pid = 'P' + Date.now().toString(36).toUpperCase();
@@ -1543,7 +1591,7 @@ function customerModal({ id = null, name = '', onSave = null } = {}) {
     body: () => `<div class="contact-head"><span class="av xl" id="cm-av">${esc(initials(L.name)) || ic('customers')}</span></div>
       <div class="field"><label for="cm-name">Name <span class="req">(required)</span></label><input id="cm-name" value="${esc(L.name)}" autocomplete="off" placeholder="First and last name"></div>
       <div class="field"><label for="cm-phone">WhatsApp number <span class="req">(required)</span></label><div class="input-pre"><span>+234</span><input id="cm-phone" inputmode="tel" autocomplete="off" placeholder="803 000 0000" value="${esc(L.phone ? [L.phone.slice(0, 3), L.phone.slice(3, 6), L.phone.slice(6)].filter(Boolean).join(' ') : '')}"></div><p class="err" id="cm-dup" hidden></p></div>
-      <div class="field"><label for="cm-area">Location</label><select id="cm-area">${Object.keys(AREAS).map(a => `<option ${a === L.area ? 'selected' : ''}>${a}</option>`).join('')}</select><p class="help" id="cm-fee"></p></div>
+      <div class="field"><label for="cm-area">Location</label><select id="cm-area">${!L.area ? '<option value="" selected>Not given</option>' : !AREAS[L.area] ? `<option selected>${esc(L.area)}</option>` : ''}${Object.keys(AREAS).map(a => `<option ${a === L.area ? 'selected' : ''}>${a}</option>`).join('')}</select><p class="help" id="cm-fee"></p></div>
       <div class="field"><label for="cm-ig">Instagram <span class="opt-l">(optional)</span></label><div class="input-pre"><span>@</span><input id="cm-ig" autocomplete="off" value="${esc(L.ig)}"></div></div>`,
     foot: () => `${cancelBtn}<button class="btn primary" id="cm-go">${id ? 'Save' : 'Add customer'}</button>`,
     mount(el) {
@@ -1551,7 +1599,7 @@ function customerModal({ id = null, name = '', onSave = null } = {}) {
       let match = null;
       const upd = () => {
         $('#cm-av', el).innerHTML = esc(initials(L.name)) || ic('customers');
-        $('#cm-fee', el).textContent = `Delivery to ${placeOf(L.area)} costs ${naira(feeFor(L.area))}. Pickup is free.`;
+        $('#cm-fee', el).textContent = L.area ? `Delivery to ${placeOf(L.area)} costs ${naira(feeFor(L.area))}. Pickup is free.` : 'Choose a location to see the delivery fee.';
         match = L.phone.length >= 10 ? S.customers.find(c => c.id !== id && normPhone(c.phone) === L.phone) : null;
         dup.hidden = !match;
         if (match) {
@@ -1635,7 +1683,7 @@ function remindModal(o) {
   const cu = custOf(o);
   openModal({
     title: 'Send payment reminder',
-    body: () => `<div class="field"><span class="label">To</span><div class="readonly">${esc(cu.name)}, ${esc(cu.phone)} on WhatsApp</div></div>
+    body: () => `<div class="field"><span class="label">To</span><div class="readonly">${esc(cu.name)}, ${waLine(cu)}</div></div>
       <div class="field"><label for="rm-txt">Message</label><textarea id="rm-txt">${esc(msgReminder(o))}</textarea><p class="help">The link opens their order page, where they can pay with Paystack.</p></div>`,
     foot: () => `<span class="left">Prototype: nothing is sent.</span>${cancelBtn}<button class="btn primary" id="rm-go">Send reminder</button>`,
     mount(el) { $('#rm-go', el).addEventListener('click', () => { commit(() => { o.remindedOn = TODAY; logTo(o, 'Payment reminder sent on WhatsApp'); }); closeModal(); toast('Reminder sent'); }); },
@@ -1694,6 +1742,7 @@ function fulfillModal(o) {
           logTo(o, method === 'pickup' ? `${names} picked up from ${STORE.hub}` : `${names} fulfilled by courier (${carrier}${track ? `, tracking ${track}` : ''})`);
           if (notify) logTo(o, 'Fulfillment notification sent on WhatsApp');
           if (o.items.every(i => i.handedOver)) o.deliveredOn = TODAY;
+          if (o.shopify) { const whole = o.items.every(i => i.handedOver); logTo(o, `${whole ? 'Order' : names} marked as fulfilled in Shopify. Shopify didn’t email the customer`); shopLog(`Order #${o.id} ${whole ? '' : 'partly '}marked as fulfilled in Shopify`); }
         });
         closeModal(); toast(method === 'pickup' ? 'Marked as picked up' : 'Marked as fulfilled');
       });
@@ -1758,6 +1807,13 @@ function msgBalance(o) {
   return `Hi ${f}, your order #${o.id} has arrived in Lagos. ${c.items.every(i => i.shipIncluded) ? 'Shipping was included in your price.' : `Shipping comes to ${naira(c.ship)}.`} ${c.owed > 0 ? `Your balance is ${naira(c.owed)}, plus delivery if you choose it.` : 'You’re fully paid up.'} Choose pickup or delivery and pay here:\n${statusUrl(o.id)}\n\n${STORE.owner}`;
 }
 function freightModal(b) {
+  const noKg = [...new Set(ordersIn(b).flatMap(o => o.items.filter(i => i.batchId === b.id).map(i => i.sku)))].filter(k => P(k).kg == null);
+  if (noKg.length) return openModal({
+    title: 'Add weights first', size: 'sm',
+    body: () => `<p>${plural(noKg.length, 'product')} in the ${esc(b.name)} ${noKg.length === 1 ? 'has' : 'have'} no weight yet, so the freight cost can’t be split fairly. Shopify doesn’t have weights for your products.</p>`,
+    foot: () => `${cancelBtn}<button class="btn primary" id="fw-go">Add weights</button>`,
+    mount(el) { $('#fw-go', el).addEventListener('click', () => weightsModal(noKg)); },
+  });
   const kg = batchKg(b);
   const prev = S.batches.filter(x => x.id !== b.id && x.ratePerKg != null).slice(-1)[0];
   const L = { cost: b.cost || 0 };
@@ -1839,6 +1895,492 @@ function payModal(o) {
   });
 }
 
+/* ---------- Shopify sales channel ----------
+   Orders are taken on Shopify. Each one arrives here, is matched to a customer, products and a batch, and is added.
+   Anything that can't be settled waits for Seye. Layout: Shopify Bill Pay "Sync and import", QuickBooks "For review",
+   incident.io workflow run steps (see UI-VALIDATION.md). */
+const SHOP = { store: 'preorderwithseyehub.com', handle: 'sntwws-8s' };
+// Seye's catalog as her storefront shows it: title, icon, photo, [variant, price], and whether the price includes shipping
+const SHOP_CATALOG = [
+  ["3 piece luxury food warmer - 1L,2L,3.5L","pot","https://cdn.shopify.com/s/files/1/0753/9831/6245/files/rn-image_picker_lib_temp_c076d38d-0a5e-4243-b88f-02a4f8340557.jpg?v=1792162443&width=160",[["Marble white",125000],["White",125000],["Gold",125000],["Marble black",125000],["Mint",125000],["Bronze",125000]]],
+  ["3 piece luxury food warmer - 2.5L,3L,3.5L","pot","https://cdn.shopify.com/s/files/1/0753/9831/6245/files/rn-image_picker_lib_temp_a073a8c1-2266-4f46-9408-8a64252e711b.jpg?v=1791920835&width=160",[["Marble white",180000],["White",180000],["Gold",180000],["Marble black",180000],["Mint",180000],["Bronze",180000]]],
+  ["12KG Fully Automatic Washing Machine","dispenser","https://cdn.shopify.com/s/files/1/0753/9831/6245/files/511C5D48-2625-4EF7-8DA4-E3B3D6B98FEB.jpg?v=1756379321&width=160",[["",325000]]],
+  ["10 KG Fully Automatic Washing Machine","dispenser","https://cdn.shopify.com/s/files/1/0753/9831/6245/files/rn-image_picker_lib_temp_238f9e96-0826-46df-8643-cab42bbe3801.jpg?v=1779115252&width=160",[["",255000]]],
+  ["4 piece luxury food warmer - 2L,2.5L,3L, 1.5Lkettle","pot","https://cdn.shopify.com/s/files/1/0753/9831/6245/files/rn-image_picker_lib_temp_9cd7fa92-62b9-4dd7-a2fc-751e0f522551.jpg?v=1791888024&width=160",[["Marble white",185000],["White",185000],["Black",185000],["Marble black",185000],["Purple",185000]]],
+  ["2 piece luxury travel box set - 22, 26inches","bag","https://cdn.shopify.com/s/files/1/0753/9831/6245/files/rn-image_picker_lib_temp_8d1ae592-7f6c-493c-ac24-a7d5c34caee3.jpg?v=1791620000&width=160",[["Oatmeal nude",265000],["Dark green",265000],["Glacier blue",265000],["Gun gray",265000],["Ivory white",265000],["Black",265000]]],
+  ["2 piece luxury travel box set - 20, 24inches","bag","https://cdn.shopify.com/s/files/1/0753/9831/6245/files/20A0ADCD-206C-4809-A356-2F84A7E7DAC2.jpg?v=1755956368&width=160",[["Orange Handle / Pink",215000],["Orange Handle / White",215000],["Orange Handle / Black",215000],["Orange Handle / Sand Gold",215000],["Orange Handle / Yellow",215000],["Orange Handle / Green",215000],["Orange Handle / Grey",215000],["Orange Handle / Orange",215000],["Orange Handle / Lilac",215000],["Orange Handle / Red",215000],["Orange Handle / Lilac/White",215000],["Orange Handle / Red/black",215000],["Orange Handle / Black/White",215000],["Orange Handle / Blue",215000],["Black Handle / Pink",215000],["Black Handle / White",215000],["Black Handle / Black",215000],["Black Handle / Sand Gold",215000],["Black Handle / Yellow",215000],["Black Handle / Green",215000],["Black Handle / Grey",215000],["Black Handle / Orange",215000],["Black Handle / Lilac",215000],["Black Handle / Red",215000],["Black Handle / Lilac/White",215000],["Black Handle / Red/black",215000],["Black Handle / Black/White",215000],["Black Handle / Blue",215000]]],
+  ["3 piece travel box set  - 20,24,28inches","bag","https://cdn.shopify.com/s/files/1/0753/9831/6245/files/328F0FF9-7C71-4164-981E-31B5BDB4F3E7.jpg?v=1753957717&width=160",[["Pink",220000],["White",220000],["Black",220000],["Deep Green",220000],["Nude",220000],["Light Green",220000],["Blue",220000],["Grey",220000],["Red",220000]]],
+  ["4 piece hammered stainless steel","pot","https://cdn.shopify.com/s/files/1/0753/9831/6245/files/rn-image_picker_lib_temp_3638b360-092a-4620-aa35-511dfce33105.jpg?v=1790018698&width=160",[["",135000]]],
+  ["Korkmaz 5 piece stainless steel","pot","https://cdn.shopify.com/s/files/1/0753/9831/6245/files/3606356D-BD02-457A-98AA-2F18B4A0AF38.jpg?v=1752997154&width=160",[["Glass",145000],["Stainless",145000]]],
+  ["6 piece hammered stainless steel","pot","https://cdn.shopify.com/s/files/1/0753/9831/6245/files/F1F3D8BF-5175-46E0-8CCD-B228D33CBD9C.jpg?v=1753134310&width=160",[["Gold handle - Plain",178000],["Pure silver",178000],["Gold Handle - Honeycomb",178000]]],
+  ["Orthopedic Mattress","box","https://cdn.shopify.com/s/files/1/0753/9831/6245/files/rn-image_picker_lib_temp_51c3f05d-533c-4ece-b3d3-1d64e5bfbe55.jpg?v=1759419648&width=160",[["4.9by6.5 feet",365000],["6.5by6.5 feet",395000]]],
+  ["31cm oval enamel cast iron pot","pot","https://cdn.shopify.com/s/files/1/0753/9831/6245/files/DF6118D9-BCF0-400A-91BA-58C350FD7B87.jpg?v=1752616521&width=160",[["White",62000],["Red",62000],["Orange",62000],["Blue",62000]]],
+  ["5 piece enamel cast iron cookware","pot","https://cdn.shopify.com/s/files/1/0753/9831/6245/files/C5DE3CFC-F4BD-4830-ACE1-24674B001A44.jpg?v=1752434337&width=160",[["Olive Green",145000],["Yellow",145000],["White",145000],["Red",145000],["Gradient Grey",145000],["Light Blue",145000],["Double Cyan",145000],["Matte black",145000],["Light Green",145000],["Glossy black",145000],["Light Grey",145000],["Orange",145000]]],
+  ["36cm Enamel Cast Iron Wok Pan","pan","https://cdn.shopify.com/s/files/1/0753/9831/6245/files/723F86B4-47B1-4266-9ACC-16E1BDDC4086.png?v=1752157388&width=160",[["Yellow",56000],["White",56000],["Red",56000],["Orange",56000],["Teal",56000],["Lemon green",56000],["Blue",56000],["Black",56000]]],
+  ["4 piece enamel cast iron cookware","pot","https://cdn.shopify.com/s/files/1/0753/9831/6245/files/rn-image_picker_lib_temp_31482d64-08c5-4481-b90d-13d8baf84ffa.jpg?v=1791751147&width=160",[["Blue",99000],["White",99000],["Red",99000],["Gradient Grey",99000],["Black",99000],["Teal",99000],["Turquoise",99000],["Yellow",99000],["Orange",99000],["Olive green",99000],["Light Green",99000],["Matte black",99000],["Light blue",99000],["Deep blue",99000],["Light Grey",99000]]],
+  ["12 piece set of high borosilicate glass bowls","bowl","https://cdn.shopify.com/s/files/1/0753/9831/6245/files/rn-image_picker_lib_temp_165330ac-f132-4fb4-a064-c5ff8e6776bd.jpg?v=1771582164&width=160",[["",34000]]],
+  ["7 piece enamel cast iron cookware","pot","https://cdn.shopify.com/s/files/1/0753/9831/6245/files/89D393D6-ABF0-49EE-AD7B-68A6E8AE1094.jpg?v=1770039811&width=160",[["Olive Green",185000],["Yellow",185000],["White",185000],["Red",185000],["Orange",185000],["Light Teal",185000],["Light Grey",185000],["Gradient Grey",185000],["Light green",185000],["Matte Black",185000],["Double Cyan",185000]]],
+  ["Sedar 6L Soundproof high-powered blender + 1L Dry blender jar + 1 bottle","dispenser","https://cdn.shopify.com/s/files/1/0753/9831/6245/files/EAFE7259-8048-4128-943C-C4C6B9CB6787.jpg?v=1784737611&width=160",[["Full Payment",275000]],1],
+  ["Sedar 24L All Stainless steel french door multifunction air fryer oven + 1 enamel bake tray","dispenser","https://cdn.shopify.com/s/files/1/0753/9831/6245/files/rn-image_picker_lib_temp_5169170d-bd81-42fe-9f92-797186613881.jpg?v=1782909309&width=160",[["",245000]],1],
+];
+const shopKey = (title, variant) => (variant ? `${title} - ${variant}` : String(title)).replace(/\s+/g, ' ').trim().toLowerCase();
+const SHOP_INDEX = {};
+SHOP_CATALOG.forEach(([title, icon, image, vs, inc]) => vs.forEach(([variant, price]) => { SHOP_INDEX[shopKey(title, variant)] = { title, variant, price, icon, image, inc: !!inc }; }));
+// An export names each line "Title - Variant"; the catalog says where the title ends
+const shopItem = name => ({ ...(SHOP_INDEX[shopKey(name)] || { title: String(name).trim(), variant: '', price: 0, icon: 'box', image: null, inc: false }) });
+const catLine = (start, n = 0, qty = 1) => { const c = SHOP_CATALOG.find(x => x[0].startsWith(start)) || SHOP_CATALOG[0], [variant, price] = c[3][n % c[3].length]; return { title: c[0], variant, price, qty, icon: c[1], image: c[2], inc: !!c[4] }; };
+
+const nowIso = () => new Date().toISOString();
+const minsAgo = n => new Date(Date.now() - n * 6e4).toISOString();
+const dayAt = (n, h, m = 0) => { const d = new Date(T0 + n * DAY); d.setHours(h, m, 0, 0); return d.toISOString(); };
+const lastNight = () => { const d = new Date(); d.setHours(2, 0, 0, 0); if (d > new Date()) d.setDate(d.getDate() - 1); return d.toISOString(); };
+const localDay = s => iso(new Date(s).getTime());
+function fmtAt(s) {
+  const n = dayDiff(localDay(s)), t = new Date(s).toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true });
+  return `${n === 0 ? 'Today' : n === -1 ? 'Yesterday' : fmt(localDay(s))}, ${t}`;
+}
+function agoAt(s) {
+  const m = Math.round((Date.now() - new Date(s).getTime()) / 6e4);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m} min ago`;
+  if (m < 1440) return `${plural(Math.round(m / 60), 'hour')} ago`;
+  return ago(localDay(s));
+}
+
+const shopEntry = no => S.shopify.orders.find(e => e.no === Number(no));
+const shopWaiting = () => S.shopify ? S.shopify.orders.filter(e => e.status === 'waiting') : [];
+const kgNeeded = () => Object.values(S.products).filter(p => p.shopify && p.kg == null);
+const shopNoPhone = () => S.customers.filter(c => c.fromShopify && !c.phone);
+const shopPayChecks = () => S.orders.filter(o => o.shopify && o.shopify.payCheck && !o.shopify.payCheck.done);
+const shopAdminUrl = sid => `https://admin.shopify.com/store/${SHOP.handle}/orders/${encodeURIComponent(sid)}`;
+const shopPhone = raw => { const d = normPhone(raw); return d.length === 10 ? fmtPhone(d) : String(raw || '').trim(); };
+const normName = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+const byNewest = (a, b) => b.at.localeCompare(a.at);
+function shopLog(text, at = nowIso()) { S.shopify.log.push({ at, text }); S.shopify.log.sort(byNewest); S.shopify.log.length = Math.min(S.shopify.log.length, 60); }
+function shopNote() { const w = shopWaiting().length; if (w) return `${w} waiting for you`; const e = S.shopify.orders[0]; return e ? `Last order ${agoAt(e.at)}` : 'Connected'; }
+function areaFrom(city, province) {
+  const s = `${city || ''} ${province || ''}`.toLowerCase();
+  const hit = Object.keys(AREAS).find(a => s.includes(a.toLowerCase()));
+  return hit || String(city || province || '').trim().replace(/\s+/g, ' ').replace(/(^|\s)\S/g, x => x.toUpperCase());
+}
+
+/* Who placed it: the Shopify customer, then the WhatsApp number, then email. The same name with other details waits for Seye. */
+function shopMatch(c) {
+  const ph = normPhone(c.phone), em = String(c.email || '').trim().toLowerCase();
+  let k = c.sid && S.customers.find(x => x.shopifyId === c.sid);
+  if (k) return { id: k.id, how: 'shopify' };
+  k = ph.length === 10 && S.customers.find(x => normPhone(x.phone) === ph);
+  if (k) return { id: k.id, how: 'phone' };
+  k = em && S.customers.find(x => String(x.email || '').toLowerCase() === em);
+  if (k) return { id: k.id, how: 'email' };
+  k = S.customers.find(x => normName(x.name) && normName(x.name) === normName(c.name));
+  return k ? { hold: k.id } : { how: 'new' };
+}
+function shopNewCustomer(c, date) {
+  const id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), ph = normPhone(c.phone);
+  S.customers.push({ id, name: String(c.name || '').trim() || 'Shopify customer', phone: ph.length === 10 ? fmtPhone(ph) : '', area: areaFrom(c.city, c.province), instagram: '', email: String(c.email || '').trim(), shopifyId: c.sid || null, fromShopify: true, createdOn: date });
+  return id;
+}
+const shopProduct = l => Object.values(S.products).find(p => p.shopify && p.shopify.key === shopKey(l.title, l.variant));
+function shopNewProduct(l, date) {
+  const id = 'S' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
+  S.products[id] = { id, name: l.title, variant: l.variant, price: l.price, cost: null, kg: null, icon: l.icon || 'box', image: l.image || null, createdOn: date, shopify: { key: shopKey(l.title, l.variant) } };
+  return id;
+}
+/* Which batch: the one taking orders on the day it was placed. If two were, the one that already lists its products. */
+function shopBatch(date, pids) {
+  const open = S.batches.filter(b => b.status === 'open' && b.createdOn <= date && date <= b.closesOn);
+  if (open.length < 2) return { b: open[0] || null, n: open.length };
+  const listed = open.filter(b => pids.every(id => id && (b.lineup || []).includes(id)));
+  return { b: listed.length === 1 ? listed[0] : null, n: open.length };
+}
+
+/* Add a Shopify order, or leave it waiting. Running it again after Seye decides finishes the job. */
+function shopTake(e) {
+  if (e.status === 'added') return e;
+  const pick = e.pick || {}, date = e.created;
+  const lines = e.lines.map(l => { const p = shopProduct(l); return { ...l, pid: p ? p.id : null }; });
+  const who = pick.customerId === 'new' ? { how: 'new' } : pick.customerId ? { id: pick.customerId, how: 'you' } : shopMatch(e.cust);
+  const bt = pick.batchId ? { b: batchById(pick.batchId), n: 1, chosen: true } : shopBatch(date, lines.map(l => l.pid));
+  const hold = who.hold ? { kind: 'customer', candidate: who.hold } : !bt.b || bt.b.status !== 'open' ? { kind: 'batch', two: bt.n > 1 } : null;
+  if (hold) { e.status = 'waiting'; e.hold = hold; e.steps = shopSteps(e, lines, who, bt, hold); return e; }
+  const cid = who.id || shopNewCustomer(e.cust, date), cu = custById(cid), b = bt.b;
+  if (who.id && e.cust.email && !cu.email) cu.email = String(e.cust.email).trim();
+  if (!b.lineup) b.lineup = [];
+  lines.forEach(l => { if (!l.pid) { l.pid = shopNewProduct(l, date); l.isNew = true; } if (!b.lineup.includes(l.pid)) b.lineup.push(l.pid); });
+  const o = { id: String(e.no), customerId: cid, channel: e.source === 'web' ? 'Website' : 'Shopify', created: date,
+    items: lines.map(l => ({ sku: l.pid, qty: l.qty, price: l.price, batchId: b.id, shipIncluded: !!l.inc, handedOver: false, released: false, shelf: null })),
+    discount: e.discount || 0, delivery: null, payments: [], claims: [], remindedOn: null, deliveredOn: null, log: [],
+    shopify: { no: e.no, sid: e.sid || null, source: e.source, payCheck: e.payCheck ? { outstanding: e.outstanding, done: false } : null } };
+  const L = text => o.log.push({ date, text, kind: 'event' });
+  L(e.source === 'web' ? `Order placed on the website. Shopify order #${e.no}` : `Order created by staff in Shopify. Shopify order #${e.no}`);
+  L(who.how === 'new' ? `New customer ${cu.name} added from Shopify` : who.how === 'you' ? `Customer confirmed as ${cu.name}` : `Customer matched to ${cu.name} by ${who.how === 'shopify' ? 'their Shopify account' : who.how === 'phone' ? 'phone number' : 'email'}`);
+  L(bt.chosen ? `Added to the ${b.name}` : `Added to the ${b.name}, which was taking orders on ${fmt(date)}`);
+  if (e.paid > 0) {
+    o.payments.push({ id: `p${e.no}-s`, amount: e.paid, date, method: e.method, ref: e.ref || '', label: e.source === 'web' ? 'Paid at checkout' : 'Marked as paid in Shopify' });
+    L(e.source === 'web' ? `Payment of ${naira(e.paid)} received by ${payWord(e.method)} at checkout` : `Payment of ${naira(e.paid)} marked as paid in Shopify (${payWord(e.method)})`);
+  }
+  if (e.payCheck) L(`Shopify marks this order as paid, but shows ${naira(e.outstanding)} outstanding`);
+  S.orders.unshift(o);
+  e.status = 'added'; e.hold = null; e.orderId = o.id; e.match = who.how;
+  e.steps = shopSteps(e, lines, { ...who, id: cid }, bt, null);
+  return e;
+}
+/* What PreorderDesk did with the order, for the drawer (incident.io and Gumloop run details) */
+function shopSteps(e, lines, who, bt, hold) {
+  const st = [], add = (ok, title, text) => st.push({ ok, title, text });
+  add(true, 'Received', `${e.via === 'nightly' ? 'Found by the nightly check. Shopify hadn’t sent it' : e.via === 'file' ? 'Read from a Shopify export' : 'Sent by Shopify'}, ${fmtAt(e.at)}. ${e.source === 'web' ? 'Website checkout' : 'Created by staff in Shopify'}.`);
+  if (hold && hold.kind === 'customer') { const k = custById(hold.candidate); add(false, 'Customer', `${k.name} is already a customer, with ${k.phone ? `the number ${k.phone}` : 'no number'}. Shopify sent ${shopPhone(e.cust.phone) || 'no number'}. Is it the same person?`); }
+  else { const cu = who.id && custById(who.id); add(true, 'Customer', who.how === 'new' ? `New customer: ${e.cust.name}${hold ? '. Added with the order' : ''}.` : who.how === 'you' ? `${cu.name}, as you confirmed.` : `Matched to ${cu.name} by ${who.how === 'shopify' ? 'their Shopify account' : who.how === 'phone' ? `phone number. Shopify sent ${shopPhone(e.cust.phone)}` : 'email'}.`); }
+  add(true, 'Products', lines.map(l => `${l.title}${l.variant ? `, ${l.variant}` : ''}${l.qty > 1 ? ` × ${l.qty}` : ''}: ${l.pid && !l.isNew ? 'already in PreorderDesk' : hold ? 'new, added with the order' : 'new from Shopify. Add its weight before the batch’s freight cost'}`).join('\n'));
+  if (!bt.b || bt.b.status !== 'open') add(false, 'Batch', `${bt.n > 1 ? 'Two batches were' : 'No batch was'} taking orders on ${fmt(e.created)}. Choose one.`);
+  else add(true, 'Batch', bt.chosen ? `${bt.b.name}, ${e.via === 'file' ? 'chosen when the file was imported' : 'chosen by you'}.` : `${bt.b.name}. It was taking orders on ${fmt(e.created)}.`);
+  add(!e.payCheck, 'Payment', e.paid <= 0 ? 'Nothing paid yet.' : `${naira(e.paid)} ${e.source === 'web' ? `by ${payWord(e.method)} at checkout` : `marked as paid in Shopify by staff (${payWord(e.method)})`}. Saved once, with Shopify’s payment reference.${e.payCheck ? ` Shopify also shows ${naira(e.outstanding)} outstanding. Check it.` : ''}`);
+  add(!hold, hold ? 'Waiting for you' : 'Added', hold ? 'The order is added once you decide.' : `Order #${e.no} is in your orders.`);
+  return st;
+}
+function shopReceive(e, quiet) {
+  if (shopEntry(e.no) || orderById(String(e.no))) return null;
+  S.shopify.orders.push(e); S.shopify.orders.sort(byNewest);
+  shopTake(e);
+  if (!quiet) shopLog(`Order #${e.no} ${e.via === 'nightly' ? 'found by the nightly check' : `received ${e.source === 'web' ? 'from the website' : 'from Shopify, created by staff'}`}. ${e.status === 'added' ? 'Added' : e.hold.kind === 'batch' ? 'Waiting: needs a batch' : 'Waiting: same customer?'}`, e.at);
+  return e;
+}
+function shopEntryOf(x) {
+  const goods = sum(x.lines.map(l => l.price * l.qty)), discount = x.disc ? Math.round(goods * x.disc) : 0, total = goods - discount, outstanding = x.outstanding || 0;
+  return { no: x.no, sid: null, at: x.at, created: x.created || localDay(x.at), source: x.source, via: x.via || 'webhook', cust: x.cust, lines: x.lines,
+    discount, total, outstanding, paid: Math.max(0, total - outstanding), method: x.method, ref: x.method === 'Paystack' ? 'T' + String(x.no * 7919).padStart(9, '0') : '', payCheck: outstanding > 0,
+    status: 'new', hold: null, pick: {}, steps: [], orderId: null };
+}
+/* Sample orders: Seye's real products, made-up customers */
+function shopSample() {
+  const hal = S.customers.find(c => c.name === 'Halima Musa');
+  [
+    { no: 5996, at: lastNight(), created: rel(-20), via: 'nightly', source: 'draft', method: 'Bank transfer', cust: { name: 'Yemi Lawal', phone: '+2348000005996', email: '', city: 'Surulere', province: 'Lagos' }, lines: [catLine('31cm oval', 1)] },
+    { no: 6009, at: dayAt(-5, 10, 42), source: 'web', method: 'Paystack', disc: .01, cust: { name: 'Sade Oladipo', phone: '08000006009', email: 'sade.oladipo@example.com', city: 'Gwarinpa', province: 'Federal Capital Territory' }, lines: [catLine('Sedar 24L')] },
+    { no: 6011, at: dayAt(-3, 15, 5), source: 'draft', method: 'Bank transfer', outstanding: 100000, cust: { name: 'Ngozi Eze', phone: '+2348000006011', email: 'ngozi.eze@example.com', city: 'Wuse', province: 'Federal Capital Territory' }, lines: [catLine('12 piece set'), catLine('6 piece hammered', 1)] },
+    { no: 6012, at: dayAt(-2, 12, 30), source: 'web', method: 'Paystack', disc: .01, cust: { name: 'Bisi Afolabi', phone: '08000002040', email: 'bisi.afolabi@example.com', city: 'Bodija', province: 'Oyo' }, lines: [catLine('36cm Enamel', 2)] },
+    { no: 6013, at: dayAt(-1, 11, 20), source: 'draft', method: 'Bank transfer', cust: { name: 'Femi Ogunleye', phone: '', email: 'femi.ogunleye@example.com', city: '', province: '' }, lines: [catLine('12 piece set', 0, 2)] },
+    { no: 6014, at: dayAt(-1, 16, 10), source: 'draft', method: 'Bank transfer', cust: { name: 'Chioma Nwachukwu', phone: '+2348000006014', email: '', city: 'Lekki', province: 'Lagos' }, lines: [catLine('7 piece enamel', 3)] },
+    { no: 6015, at: minsAgo(185), source: 'web', method: 'Paystack', disc: .01, cust: { name: 'Halima Musa', phone: hal ? '0' + normPhone(hal.phone) : '08000001049', email: 'halima.musa@example.com', city: 'Kaduna', province: 'Kaduna' }, lines: [catLine('Korkmaz')] },
+    { no: 6016, at: minsAgo(25), source: 'web', method: 'Paystack', disc: .01, cust: { name: 'Kunle Adesina', phone: '08000006016', email: 'kunle.adesina@example.com', city: 'Ikeja', province: 'Lagos' }, lines: [catLine('4 piece enamel', 9)] },
+  ].map(shopEntryOf).sort((a, b) => a.at.localeCompare(b.at)).forEach(e => shopReceive(e));
+}
+function ensureShopify() {
+  if (S.shopify) return;
+  S.shopify = { store: SHOP.store, connectedOn: rel(-160), lastCheck: lastNight(), nextNo: 6017, testN: 0, orders: [], log: [], file: null };
+  shopSample();
+  save();
+}
+
+/* Test orders cycle through the cases: a customer you have, a new one, a staff order, and a name that needs a check */
+const TEST_PEOPLE = [['Bola Ajayi', 'Lekki'], ['Ifeanyi Okonkwo', 'Port Harcourt'], ['Sade Coker', 'Ikoyi'], ['Musa Abdullahi', 'Wuse'], ['Lola Bankole', 'Surulere'], ['Tunde Ogunbiyi', 'Yaba']];
+function shopTestOrder(no) {
+  const n = S.shopify.testN++, [name, city] = TEST_PEOPLE[n % TEST_PEOPLE.length], tail = String(no).slice(-4);
+  const mail = `${name.toLowerCase().replace(' ', '.')}@example.com`, known = S.customers.filter(c => c.phone);
+  const line = k => { const c = SHOP_CATALOG[(n * 5 + k * 7) % SHOP_CATALOG.length], v = c[3][(n + k) % c[3].length]; return { title: c[0], variant: v[0], price: v[1], qty: 1, icon: c[1], image: c[2], inc: !!c[4] }; };
+  const base = { no, at: nowIso(), via: 'webhook' }, web = { source: 'web', method: 'Paystack', disc: .01 };
+  if (n % 4 === 0 && known.length) { const k = known[n % known.length]; return { ...base, ...web, cust: { name: k.name, phone: '0' + normPhone(k.phone), email: '', city: k.area, province: '' }, lines: [line(0)] }; }
+  if (n % 4 === 2) return { ...base, source: 'draft', method: 'Bank transfer', cust: { name, phone: '+234800000' + tail, email: '', city, province: '' }, lines: [line(0)] };
+  if (n % 4 === 3 && known.length) { const k = known[(n * 3) % known.length]; return { ...base, ...web, cust: { name: k.name, phone: '0800001' + tail, email: mail, city, province: '' }, lines: [line(0)] }; }
+  return { ...base, ...web, cust: { name, phone: '0800000' + tail, email: mail, city, province: '' }, lines: [line(0), line(1)] };
+}
+/* Send a test order (Stripe's "simulate events" for webhooks), then show what happened to it */
+function sendTestOrder() {
+  const no = S.shopify.nextNo;
+  openModal({ drawer: true, noClose: true, title: `Shopify order #${no}`, body: () => `<div class="center" style="padding:56px 0"><div class="spin"></div><p>Receiving the order from Shopify</p><p class="muted" style="font-size:13px">Test: a customer just checked out on ${SHOP.store}</p></div>` });
+  setTimeout(() => {
+    commit(() => { S.shopify.nextNo = no + 1; shopReceive(shopEntryOf(shopTestOrder(no))); });
+    shopDrawer(no, true);
+  }, 1100);
+}
+
+const shopHow = e => e.status === 'waiting' ? (e.hold.kind === 'customer' ? 'Same name, different number' : 'Needs a batch') : ({ phone: 'Matched by phone', email: 'Matched by email', shopify: 'Matched by Shopify account', you: 'Confirmed by you', new: 'New customer' }[e.match] || '');
+const shopPill = e => e.status === 'added' ? pill('Added', 'green', 'check') : pill('Waiting for you', 'amber');
+function shopReview() {
+  const R = [];
+  shopWaiting().forEach(e => {
+    if (e.hold.kind === 'batch') R.push({ icon: 'batches', title: `Order #${e.no} needs a batch`, sub: `${esc(e.cust.name)}, placed ${fmt(e.created)}${e.via === 'nightly' ? ' and found by the nightly check' : ''}. ${e.hold.two ? 'Two batches were' : 'No batch was'} taking orders that day.`, btn: `<button class="btn sm" data-act="shop-batch" data-no="${e.no}">Choose batch</button>` });
+    else { const k = custById(e.hold.candidate); R.push({ icon: 'customers', title: `Is order #${e.no} from ${esc(k.name)}?`, sub: `Same name, different details. Shopify sent ${esc(shopPhone(e.cust.phone) || 'no number')}; you have ${esc(k.phone || 'no number')}.`, btn: `<button class="btn sm" data-act="shop-cust" data-no="${e.no}">Review</button>` }); }
+  });
+  const kg = kgNeeded();
+  if (kg.length) R.push({ icon: 'box', title: `Add weights for ${plural(kg.length, 'product')} from Shopify`, sub: `Shopify has no weights for ${kg.length === 1 ? 'it' : 'them'}. Weights split each batch’s freight cost.`, btn: '<button class="btn sm" data-act="shop-weights">Add weights</button>' });
+  shopNoPhone().forEach(c => R.push({ icon: 'chat', title: `${esc(c.name)} has no WhatsApp number`, sub: `Their order came from Shopify without one${c.email ? `. Email: ${esc(c.email)}` : ''}.`, btn: `<button class="btn sm" data-act="edit-customer" data-id="${c.id}">Add number</button>` }));
+  shopPayChecks().forEach(o => R.push({ icon: 'money', title: `Check the payment on order #${o.id}`, sub: `Shopify marks it as paid, but shows ${naira(o.shopify.payCheck.outstanding)} outstanding.`, btn: `<button class="btn sm" data-act="shop-pay" data-id="${o.id}">Review</button>` }));
+  return R;
+}
+function shopTable(es) {
+  if (!es.length) return '<div class="tbl-empty">No Shopify orders yet. Send a test order to see one arrive.</div>';
+  const batchOf = e => { const o = e.orderId && orderById(e.orderId); return o ? batchById(o.items[0].batchId) : null; };
+  return `<div class="tbl-wrap listify"><table class="tbl"><thead><tr><th>Order</th><th>Customer</th><th>Items</th><th class="r">Paid</th><th>Batch</th><th>Status</th></tr></thead><tbody>
+    ${es.map(e => { const b = batchOf(e); return `<tr data-act="shop-open" data-no="${e.no}" style="cursor:pointer"><td><span class="strong">#${e.no}</span><small>${fmtAt(e.at)}</small></td><td>${esc(e.cust.name)}<small>${shopHow(e)}</small></td><td>${plural(sum(e.lines.map(l => l.qty)), 'item')}<small class="clip">${esc(e.lines[0].title)}${e.lines.length > 1 ? ` and ${e.lines.length - 1} more` : ''}</small></td><td class="r">${naira(e.paid)}<small>${e.source === 'web' ? payWord(e.method) : 'Marked in Shopify'}</small></td><td class="muted">${b ? esc(b.name) : '<span class="faint">Not chosen</span>'}</td><td>${shopPill(e)}</td></tr>`; }).join('')}
+  </tbody></table></div>
+  <ul class="rowlist">${es.map(e => `<li><a href="#shopify" data-act="shop-open" data-no="${e.no}"><span class="av md">${ic('store')}</span><span><strong>#${e.no} ${esc(e.cust.name)}</strong><small>${fmtAt(e.at)}. ${shopHow(e)}</small></span><span class="r"><span class="num">${naira(e.paid)}</span>${shopPill(e)}</span></a></li>`).join('')}</ul>`;
+}
+function shopifyPage() {
+  const sh = S.shopify, es = sh.orders, R = shopReview();
+  const auto = es.filter(e => e.status === 'added' && !e.decided).length;
+  return `<div class="page">
+    <div class="ph">
+      <div><p class="eyebrow">Sales channel</p><h1 class="money-h">Shopify ${pill('Connected', 'green', 'check')}</h1><p class="sub">${SHOP.store}. New orders arrive here a few seconds after checkout. <span class="faint">Simulation: not connected to the real store.</span></p></div>
+      <div class="acts"><button class="btn" data-act="shop-import">${ic('upload')}Import a Shopify export</button><button class="btn primary" data-act="shop-test">Send a test order</button></div>
+    </div>
+    <section class="panel overview">
+      <div><span class="label">Orders from Shopify</span><div class="big">${es.length}</div><span class="muted">${es[0] ? `Last one ${agoAt(es[0].at)}` : 'None yet'}</span></div>
+      <div class="ov-stats three">
+        <div><span class="label">Added automatically</span><strong>${auto}</strong></div>
+        <div><span class="label">Waiting for you</span><strong>${shopWaiting().length}</strong></div>
+        <div><span class="label">Nightly check</span><strong>${new Date(sh.lastCheck).toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true })}</strong></div>
+      </div>
+    </section>
+    <section class="sec">
+      <div class="sec-h"><h2>To review ${R.length ? `<span class="n">${R.length}</span>` : ''}</h2></div>
+      ${R.length ? `<ul class="todo">${R.map(r => `<li><div class="row"><span class="ti amber">${ic(r.icon)}</span><span><strong>${r.title}</strong><small>${r.sub}</small></span>${r.btn}</div></li>`).join('')}</ul>`
+        : `<div class="empty">${ic('done')}<strong>Nothing to review</strong>New Shopify orders are being added automatically.</div>`}
+    </section>
+    <section class="sec">
+      <div class="sec-h"><h2>Orders from Shopify <span class="n">${es.length}</span></h2></div>
+      ${shopTable(es)}
+    </section>
+    <div class="detail">
+      <div class="d-main"><section class="sec"><div class="sec-h"><h2>Activity</h2></div>
+        <ul class="tl">${sh.log.slice(0, 15).map(l => `<li><span>${esc(l.text)}</span><small>${fmtAt(l.at)}</small></li>`).join('') || '<li><span class="muted">Nothing yet</span></li>'}</ul></section></div>
+      <aside class="d-side">
+        <section class="sec"><div class="sec-h"><h2>How orders are matched</h2></div>
+          <ul class="facts">
+            <li><div class="fh">Customer</div><p>Shopify account, then WhatsApp number, then email</p><p class="muted">The same name with other details waits for you.</p></li>
+            <li><div class="fh">Products</div><p>Shopify product and variant</p><p class="muted">New ones are added, then need a weight.</p></li>
+            <li><div class="fh">Batch</div><p>The batch taking orders that day</p><p class="muted">If none was, the order waits for you.</p></li>
+            <li><div class="fh">Payment</div><p>What Shopify shows as paid, saved once</p><p class="muted">Balances are collected here, not in Shopify.</p></li>
+          </ul></section>
+        <section class="sec"><div class="sec-h"><h2>Connection</h2></div>
+          <ul class="facts">
+            <li><div class="fh">Store</div><p>${SHOP.store}</p><p class="muted">Connected ${fmtY(sh.connectedOn)}</p></li>
+            <li><div class="fh">From Shopify</div><p>New orders, edits, cancellations and refunds</p><p class="muted">Shopify’s own Fulfilled status is ignored.</p></li>
+            <li><div class="fh">To Shopify</div><p>Fulfilled, when an order is handed over</p><p class="muted">Shopify doesn’t email the customer.</p></li>
+            <li><div class="fh">Nightly check</div><p>Every night at 2am</p><p class="muted">Asks Shopify for the last two days of orders and adds any it missed.</p></li>
+            ${sh.file ? `<li><div class="fh">Last import</div><p>${esc(sh.file.name)}</p><p class="muted">${plural(sh.file.count, 'order')}, ${fmtAt(sh.file.at)}</p></li>` : ''}
+          </ul></section>
+      </aside>
+    </div>
+  </div>`;
+}
+function shopDrawer(no, still) {
+  const e = shopEntry(no); if (!e) return;
+  const added = e.status === 'added';
+  openModal({
+    drawer: true, _drawn: !!still, title: `Shopify order #${e.no}`, headAct: shopPill(e),
+    body: () => `<div class="kv" style="padding-top:0">
+        <span>Received</span><span>${fmtAt(e.at)}</span>
+        <span>From</span><span>${e.source === 'web' ? 'Website checkout' : 'Staff, in Shopify'}</span>
+        <span>Customer</span><span>${esc(e.cust.name)}<small>${esc([shopPhone(e.cust.phone), e.cust.email].filter(Boolean).join(', ') || 'No phone or email')}</small></span>
+        <span>Paid</span><span>${naira(e.paid)}<small>${e.paid ? (e.source === 'web' ? `${payWord(e.method)} at checkout` : 'Marked as paid in Shopify') : 'Nothing yet'}</small></span>
+      </div>
+      <h3>Items</h3>${e.lines.map(l => `<div class="line">${thumb(l)}<div><div class="ln">${esc(l.title)}</div><div class="ls">${esc(l.variant || '')}</div></div><div class="lq">${naira(l.price)} × ${l.qty}</div><div class="lt">${naira(l.price * l.qty)}</div></div>`).join('')}
+      ${e.discount ? `<div class="kv" style="padding-top:4px"><span>Discount</span><span>${naira(-e.discount)}</span></div>` : ''}
+      <h3>What PreorderDesk did</h3>
+      <ol class="steps">${e.steps.map(s => `<li><span class="si ${s.ok ? '' : 'amber'}">${ic(s.ok ? 'check' : 'alert')}</span><span><strong>${esc(s.title)}</strong><p>${esc(s.text).replace(/\n/g, '<br>')}</p></span></li>`).join('')}</ol>`,
+    foot: () => added ? `<button class="btn" data-act="m-close">Close</button><a class="btn primary" href="#order/${e.orderId}">Open order #${e.orderId}</a>`
+      : `${cancelBtn}<button class="btn primary" data-act="${e.hold.kind === 'batch' ? 'shop-batch' : 'shop-cust'}" data-no="${e.no}">${e.hold.kind === 'batch' ? 'Choose a batch' : 'Check the customer'}</button>`,
+  });
+}
+function shopDecide(e, choice) {
+  commit(() => { e.pick = { ...e.pick, ...choice }; e.decided = true; shopTake(e); if (e.status === 'added') shopLog(`Order #${e.no} added after your check`); });
+  closeModal();
+  if (e.status === 'added') toast(`Order #${e.no} added`, { href: `#order/${e.orderId}`, label: 'View order' });
+  else shopDrawer(e.no);
+}
+/* Choose a batch for a waiting order (delivery-method choice pattern) */
+function shopBatchModal(no) {
+  const e = shopEntry(no), obs = openBatches();
+  let pick = obs[0] ? obs[0].id : null;
+  openModal({
+    title: `Choose a batch for #${e.no}`, size: 'sm',
+    body: () => `<p>${esc(first(e.cust.name))}’s order was placed on ${fmtY(e.created)}, when ${e.hold.two ? 'two batches were' : 'no batch was'} taking orders.</p>
+      ${obs.length ? `${obs.map(b => `<button class="opt" role="radio" aria-checked="${b.id === pick}" data-b="${b.id}"><span class="l"><span class="radio"></span><span><strong>${esc(b.name)}</strong><small>Taking orders until ${fmt(b.closesOn)}. ${plural(ordersIn(b).length, 'order')} so far</small></span></span></button>`).join('')}<p class="help">The order’s products are added to the batch.</p>`
+        : `<div class="be-empty">No batch is taking orders. <a href="#batches/new">Create a batch</a> first.</div>`}`,
+    foot: () => `${cancelBtn}<button class="btn primary" id="sb-go" ${pick ? '' : 'disabled'}>Add to batch</button>`,
+    mount(el) {
+      $$('[data-b]', el).forEach(x => x.addEventListener('click', () => { pick = x.dataset.b; $$('[data-b]', el).forEach(y => y.setAttribute('aria-checked', y === x)); }));
+      $('#sb-go', el).addEventListener('click', () => shopDecide(e, { batchId: pick }));
+    },
+  });
+}
+/* Same customer? (Calendly "Merge contacts" side by side, Klaviyo "Merge profile" wording) */
+function shopCustModal(no) {
+  const e = shopEntry(no), k = custById(e.hold.candidate), n = S.orders.filter(o => o.customerId === k.id).length;
+  const card = (label, rows) => `<div><span class="label">${label}</span>${rows.filter(Boolean).map((r, i) => `<p class="${i ? 'muted' : ''}">${r}</p>`).join('')}</div>`;
+  openModal({
+    title: 'Same customer?',
+    body: () => `<p>Order #${e.no} came from Shopify with a name you already have, but different contact details. If it’s the same person, the order goes on their record.</p>
+      <div class="cmp">${card('From Shopify', [`<strong>${esc(e.cust.name)}</strong>`, esc(shopPhone(e.cust.phone)) || 'No phone number', esc(e.cust.email), esc([e.cust.city, e.cust.province].filter(Boolean).join(', '))])}
+        ${card('In PreorderDesk', [`<strong>${esc(k.name)}</strong>`, esc(k.phone) || 'No phone number', esc(k.email || ''), esc(placeOf(k.area)), plural(n, 'order')])}</div>`,
+    foot: () => '<button class="btn" id="sc-new">Different people</button><button class="btn primary" id="sc-same">Same person</button>',
+    mount(el) {
+      $('#sc-same', el).addEventListener('click', () => shopDecide(e, { customerId: k.id }));
+      $('#sc-new', el).addEventListener('click', () => shopDecide(e, { customerId: 'new' }));
+    },
+  });
+}
+/* Add weights in one go (Shopify variant table and bulk editor) */
+function weightsModal(ids) {
+  ids = (ids || kgNeeded().map(p => p.id)).filter(id => P(id) && P(id).kg == null);
+  if (!ids.length) { closeModal(); toast('Every product has a weight'); return; }
+  const auto = new Set();
+  openModal({
+    title: 'Add weights',
+    body: () => `<p>Weight per unit, in kilograms. When you type one, the other variants of that product get it too, so only change the ones that differ.</p>
+      <ul class="picklist">${ids.map(id => { const p = P(id); return `<li><label style="grid-template-columns:40px minmax(0,1fr) 116px">${thumb(p)}<span><span>${esc(p.name)}</span><small>${esc(p.variant || '')}</small></span><span class="input-post"><input data-kg="${id}" inputmode="decimal" autocomplete="off" aria-label="Weight of ${esc(p.name)}${p.variant ? ', ' + esc(p.variant) : ''}"><span>kg</span></span></label></li>`; }).join('')}</ul>`,
+    foot: () => `<span class="left" id="wk-n"></span>${cancelBtn}<button class="btn primary" id="wk-go" disabled>Save weights</button>`,
+    mount(el) {
+      const ins = $$('[data-kg]', el), go = $('#wk-go', el), num = s => Number(String(s).replace(',', '.'));
+      const upd = () => { const n = ins.filter(i => num(i.value) > 0).length; $('#wk-n', el).textContent = `${n} of ${plural(ins.length, 'product')}`; go.disabled = !n; };
+      ins.forEach(inp => inp.addEventListener('input', () => {
+        inp.value = inp.value.replace(/[^\d.,]/g, ''); auto.delete(inp.dataset.kg);
+        const name = P(inp.dataset.kg).name;
+        ins.forEach(x => { if (x !== inp && P(x.dataset.kg).name === name && (!x.value || auto.has(x.dataset.kg))) { x.value = inp.value; auto.add(x.dataset.kg); } });
+        upd();
+      }));
+      upd();
+      go.addEventListener('click', () => {
+        const set = ins.filter(i => num(i.value) > 0);
+        commit(() => set.forEach(i => { P(i.dataset.kg).kg = num(i.value); }));
+        closeModal(); toast(`${plural(set.length, 'weight')} saved`);
+      });
+    },
+  });
+}
+function payCheckModal(o) {
+  const c = calc(o), out = o.shopify.payCheck.outstanding;
+  openModal({
+    title: 'Check the payment', size: 'sm',
+    body: () => `<p>Shopify marks order #${o.id} as paid, but also shows ${naira(out)} outstanding. PreorderDesk counted ${naira(c.paid)} as paid, so the ${naira(out)} is part of the balance due.</p><p class="muted" style="margin-top:10px">If ${esc(first(custOf(o).name))} has already paid it, record the payment on the order.</p>`,
+    foot: () => `<a class="btn" href="#order/${o.id}">Open order</a><button class="btn primary" id="pc-go">Looks right</button>`,
+    mount(el) { $('#pc-go', el).addEventListener('click', () => { commit(() => { o.shopify.payCheck.done = true; logTo(o, 'Shopify payment checked'); }); closeModal(); toast('Payment checked'); }); },
+  });
+}
+
+/* Import a Shopify orders export (Quo and Sprig CSV upload, Buffer's missing-columns error, Unify review step).
+   The file is read in this browser and never leaves it. */
+function parseCSV(text) {
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === ',') { row.push(f); f = ''; }
+    else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+    else f += ch;
+  }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim()));
+}
+const shopTime = s => { const m = String(s || '').match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})(?::(\d{2}))?\s*(?:([+-]\d{2}):?(\d{2}))?/); const d = m && new Date(`${m[1]}T${m[2]}:${m[3] || '00'}${m[4] ? `${m[4]}:${m[5] || '00'}` : ''}`); return d && !isNaN(d) ? d.toISOString() : new Date(T0).toISOString(); };
+/* One entry per order. Order details sit on each order's first row; every row is one line item. */
+function shopReadExport(text) {
+  const rows = parseCSV(text.replace(/^﻿/, ''));
+  const H = (rows[0] || []).map(h => h.trim());
+  const miss = ['Name', 'Created at', 'Lineitem name', 'Lineitem quantity', 'Lineitem price', 'Total', 'Financial Status'].filter(h => !H.includes(h));
+  if (miss.length) throw new Error(`This doesn’t look like a Shopify orders export. Missing columns: ${miss.join(', ')}.`);
+  const get = (r, h) => H.includes(h) ? String(r[H.indexOf(h)] ?? '').trim() : '';
+  const groups = new Map();
+  rows.slice(1).forEach(r => { const k = get(r, 'Name'); if (k) { if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); } });
+  if (!groups.size) throw new Error('This Shopify export has no orders in it.');
+  return [...groups].map(([name, rs]) => {
+    const h = rs.find(r => get(r, 'Financial Status')) || rs[0], g = c => get(h, c), n = c => Number(g(c).replace(/,/g, '')) || 0;
+    const st = g('Financial Status').toLowerCase(), made = g('Created at'), total = n('Total'), outstanding = n('Outstanding Balance'), fulAt = g('Fulfilled at');
+    const lines = rs.map(r => { const it = shopItem(get(r, 'Lineitem name')); return { ...it, price: Number(get(r, 'Lineitem price')) || it.price, qty: Number(get(r, 'Lineitem quantity')) || 1 }; });
+    return { no: digits(name), sid: g('Id') || null, at: shopTime(made), created: (made.match(/^\d{4}-\d{2}-\d{2}/) || [TODAY])[0], source: g('Source') === 'web' ? 'web' : 'draft', via: 'file',
+      cust: { name: g('Billing Name') || g('Shipping Name') || g('Email') || `Customer on order ${name}`, phone: g('Phone') || g('Shipping Phone') || g('Billing Phone'), email: g('Email'), city: g('Shipping City') || g('Billing City'), province: g('Shipping Province Name') || g('Shipping Province') || g('Billing Province Name') || g('Billing Province') },
+      lines, discount: n('Discount Amount'), total, outstanding,
+      paid: ['pending', 'authorized', 'expired', 'voided', ''].includes(st) ? 0 : Math.max(0, total - outstanding - n('Refunded Amount')),
+      method: /paystack/i.test(g('Payment Method')) ? 'Paystack' : /cash/i.test(g('Payment Method')) ? 'Cash' : 'Bank transfer', ref: '',
+      payCheck: st === 'paid' && outstanding > 0, skip: !!g('Cancelled at') || ['voided', 'refunded'].includes(st),
+      autoFul: g('Fulfillment Status') === 'fulfilled' && !!fulAt && Math.abs(new Date(shopTime(fulAt)) - new Date(shopTime(made))) < 3e5,
+      status: 'new', hold: null, pick: {}, steps: [], orderId: null };
+  });
+}
+function shopFileSummary(es, name) {
+  const keep = es.filter(e => !e.skip), fresh = keep.filter(e => !shopEntry(e.no) && !orderById(String(e.no)));
+  const who = new Map();
+  keep.forEach(e => { const k = normPhone(e.cust.phone) || String(e.cust.email).toLowerCase() || normName(e.cust.name); who.set(k, (who.get(k) || 0) + 1); });
+  const keys = new Set(keep.flatMap(e => e.lines.map(l => shopKey(l.title, l.variant))));
+  const known = new Set(Object.values(S.products).filter(p => p.shopify).map(p => p.shopify.key));
+  const days = keep.map(e => e.created).sort();
+  return { name, keep, fresh, skipped: keep.length - fresh.length, cancelled: es.length - keep.length, from: days[0] || TODAY, to: days[days.length - 1] || TODAY,
+    web: keep.filter(e => e.source === 'web').length, people: who.size, repeat: [...who.values()].filter(x => x > 1).length,
+    noPhone: new Set(keep.filter(e => normPhone(e.cust.phone).length !== 10).map(e => normName(e.cust.name))).size,
+    products: keys.size, newProducts: [...keys].filter(k => !known.has(k)).length, paid: sum(keep.map(e => e.paid)), checks: keep.filter(e => e.payCheck), autoFul: keep.filter(e => e.autoFul).length };
+}
+function shopImport(s, batchId) {
+  const es = [...(batchId ? s.fresh : s.keep)].sort((a, b) => a.at.localeCompare(b.at));
+  commit(() => {
+    if (!batchId) {
+      const sh = S.shopify;
+      S = { v: 3, seq: 1052, products: {}, customers: [], orders: [], batches: [], shopify: { ...sh, orders: [], log: [], testN: 0 } };
+      const b = { id: 'B' + Date.now(), name: `${MONTHS[Number(s.to.slice(5, 7)) - 1]} batch`, ref: nextRef(), from: 'Guangzhou', status: 'open', createdOn: s.from, closesOn: s.to > TODAY ? s.to : TODAY, shippedOn: null, eta: null, receivedOn: null, ratePerKg: null, cost: null, spareUnits: 0, spareKg: 0, shelf: 'A', lineup: [], log: [] };
+      b.log.push({ date: TODAY, text: `Batch created for ${plural(es.length, 'order')} imported from Shopify`, kind: 'event' });
+      S.batches.push(b); batchId = b.id;
+    }
+    es.forEach(e => { e.pick = { batchId }; shopReceive(e, true); });
+    S.shopify.nextNo = Math.max(S.shopify.nextNo, ...es.map(e => e.no + 1));
+    S.shopify.file = { name: s.name, count: es.length, at: nowIso() };
+    shopLog(`Imported ${plural(es.length, 'order')} from ${s.name}`);
+  });
+  return es.length;
+}
+function importModal() {
+  let s = null, err = '', fresh = true, pick = openBatches()[0] ? openBatches()[0].id : null;
+  const range = () => s.from === s.to ? fmtY(s.from) : `${fmt(s.from)} to ${fmtY(s.to)}`;
+  const review = () => {
+    const obs = openBatches(), owed = sum(s.checks.map(e => e.outstanding));
+    return `<div class="static" style="margin-bottom:6px">${ic('orders')}<span><strong>${esc(s.name)}</strong><small>${plural(s.keep.length, 'order')}, placed ${range()}</small></span><button type="button" class="link" id="im-again" style="margin-left:auto">Choose another</button></div>
+      <div class="kv">
+        <span>From the website<small>Paid by Paystack at checkout</small></span><span>${s.web}</span>
+        <span>Created by staff<small>Marked as paid in Shopify</small></span><span>${s.keep.length - s.web}</span>
+        <span>Customers<small>${[s.repeat ? `${plural(s.repeat, 'customer')} ordered more than once` : '', s.noPhone ? `${s.noPhone} without a phone number` : ''].filter(Boolean).join('. ') || 'Matched by phone, then email'}</small></span><span>${s.people}</span>
+        <span>Products<small>${fresh || s.newProducts ? `${fresh ? 'All' : s.newProducts} new here. They’ll need a weight` : 'All already here'}</small></span><span>${s.products}</span>
+        <span>Paid<small>${s.checks.length ? `${plural(s.checks.length, 'order')} also ${s.checks.length === 1 ? 'shows' : 'show'} ${naira(owed)} outstanding` : 'As Shopify shows it'}</small></span><span>${naira(s.paid)}</span>
+        ${s.skipped && !fresh ? `<span>Already in PreorderDesk<small>Skipped</small></span><span>${s.skipped}</span>` : ''}
+        ${s.cancelled ? `<span>Cancelled or refunded<small>Skipped</small></span><span>${s.cancelled}</span>` : ''}
+      </div>
+      ${s.autoFul ? `<p class="help" style="margin:0 0 14px">Shopify marked ${s.autoFul === s.keep.length ? 'every one' : plural(s.autoFul, 'order')} as fulfilled the moment ${s.autoFul === 1 ? 'it was' : 'they were'} placed. That’s a Shopify setting. PreorderDesk ignores it: an order is fulfilled here when it’s handed over.</p>` : ''}
+      <label class="check"><input type="checkbox" id="im-fresh" ${fresh ? 'checked' : ''}> Start fresh: remove the sample orders, customers and batches</label>
+      ${fresh ? `<div class="readonly" style="margin-bottom:8px">They go into a new ${MONTHS[Number(s.to.slice(5, 7)) - 1]} batch, taking orders until ${fmtY(s.to > TODAY ? s.to : TODAY)}.</div>`
+        : obs.length ? `<div class="field"><label for="im-batch">Add them to</label><select id="im-batch">${obs.map(b => `<option value="${b.id}" ${b.id === pick ? 'selected' : ''}>${esc(b.name)}, taking orders until ${fmt(b.closesOn)}</option>`).join('')}</select></div>`
+        : '<div class="be-empty">No batch is taking orders. Start fresh, or create a batch first.</div>'}
+      <p class="help">The sample data comes back with Reset in the sidebar.</p>`;
+  };
+  openModal({
+    title: 'Import a Shopify export',
+    body: () => s ? review() : `<p>Bring in orders that are already in Shopify, for example on the day you start using PreorderDesk.</p>
+      <ol style="margin:0 0 14px;padding-left:20px;color:var(--ink-2)"><li>In Shopify, open Orders and click Export. Choose CSV for Excel, Numbers, or other spreadsheet programs.</li><li>Add the file here. Orders already in PreorderDesk are skipped.</li></ol>
+      <label class="drop" id="im-drop">${ic('upload')}<strong>Choose a CSV file</strong><span>or drag it here</span><input type="file" id="im-file" accept=".csv,text/csv" hidden></label>
+      ${err ? `<p class="err" style="margin:-4px 0 10px">${esc(err)}</p>` : ''}
+      <p class="help">The file stays on this device. Nothing is uploaded or sent.</p>`,
+    foot: () => { if (!s) return cancelBtn; const n = (fresh ? s.keep : s.fresh).length; return `${cancelBtn}<button class="btn primary" id="im-go" ${n && (fresh || pick) ? '' : 'disabled'}>Import ${plural(n, 'order')}</button>`; },
+    mount(el) {
+      const read = async f => {
+        if (!f) return;
+        try { s = shopFileSummary(shopReadExport(await f.text()), f.name); err = ''; }
+        catch (x) { s = null; err = x && /Shopify/.test(x.message) ? x.message : 'That file couldn’t be read. Export the orders from Shopify as a CSV file and try again.'; }
+        drawModal();
+      };
+      const inp = $('#im-file', el), drop = $('#im-drop', el);
+      if (inp) inp.addEventListener('change', () => read(inp.files[0]));
+      if (drop) {
+        ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, ev => { ev.preventDefault(); drop.classList.add('over'); }));
+        ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, ev => { ev.preventDefault(); drop.classList.remove('over'); }));
+        drop.addEventListener('drop', ev => read(ev.dataTransfer.files[0]));
+      }
+      const again = $('#im-again', el); if (again) again.addEventListener('click', () => { s = null; drawModal(); });
+      const fr = $('#im-fresh', el); if (fr) fr.addEventListener('change', () => { fresh = fr.checked; drawModal(); });
+      const bs = $('#im-batch', el); if (bs) bs.addEventListener('change', () => { pick = bs.value; });
+      const go = $('#im-go', el); if (go) go.addEventListener('click', () => { const n = shopImport(s, fresh ? null : pick); closeModal(); location.hash = '#shopify'; toast(`${plural(n, 'order')} imported from ${s.name}`); });
+    },
+  });
+}
+
 /* ---------- Commit and actions ---------- */
 function logTo(o, text, kind = 'event') { o.log.push({ date: TODAY, text, kind }); }
 function blog(b, text, kind = 'event') { b.log.push({ date: TODAY, text, kind }); }
@@ -1892,6 +2434,14 @@ const ACT = {
       onDone: keys => { const added = keys.filter(k => !b.lineup.includes(k)); commit(() => { b.lineup = [...new Set([...keys, ...locked])]; if (added.length) blog(b, `${andList(added.map(k => P(k).name))} added to this batch`); }); toast('Batch products updated'); },
       onNew: () => productDrawer({ batchId: b.id }) });
   },
+  /* Shopify */
+  'shop-test': () => sendTestOrder(),
+  'shop-import': () => importModal(),
+  'shop-open': el => shopDrawer(el.dataset.no),
+  'shop-batch': el => shopBatchModal(el.dataset.no),
+  'shop-cust': el => shopCustModal(el.dataset.no),
+  'shop-weights': () => weightsModal(),
+  'shop-pay': el => payCheckModal(orderById(el.dataset.id)),
   'note-open': el => { noteOpen = el.dataset.id; render(); const t = $('.note-box textarea'); if (t) t.focus(); },
   'note-cancel': () => { noteOpen = null; render(); },
   /* New order editor */
@@ -1922,9 +2472,9 @@ const ACT = {
   'm-close': () => { if (modal && modal.noClose) return; closeModal(); },
   'reset': () => openModal({
     title: 'Reset demo data?', size: 'sm',
-    body: () => '<p>Every order, batch, product and customer goes back to the sample data. This can’t be undone.</p>',
+    body: () => '<p>Every order, batch, product, customer and Shopify order goes back to the sample data. This can’t be undone.</p>',
     foot: () => `${cancelBtn}<button class="btn primary" id="rs-go">Reset demo data</button>`,
-    mount(el) { $('#rs-go', el).addEventListener('click', () => { S = seed(); save(); od = null; bd = null; closeModal(); location.hash = '#home'; render(); toast('Demo data reset'); }); },
+    mount(el) { $('#rs-go', el).addEventListener('click', () => { S = seed(); ensureShopify(); save(); od = null; bd = null; closeModal(); location.hash = '#home'; render(); toast('Demo data reset'); }); },
   }),
 };
 document.addEventListener('click', e => {
@@ -2036,6 +2586,7 @@ function render() {
     case 'products': html = productsPage(); break;
     case 'customers': html = customersPage(); break;
     case 'customer': html = customerPage(parts[1]); nav = 'customers'; break;
+    case 'shopify': html = shopifyPage(); break;
     default: html = homePage(); nav = 'home';
   }
   $('#main').innerHTML = html;
@@ -2046,6 +2597,7 @@ function render() {
   $('#sidebar').innerHTML = `<a class="org" href="#home"><span class="org-av">PS</span><span>${STORE.name}<small>PreorderDesk</small></span></a>
     <nav class="nav" aria-label="Pages">${NAV.map(([k, l, href, icn]) => `<a href="${href}" class="${k === sideNav ? 'on' : ''}" ${k === sideNav ? 'aria-current="page"' : ''}>${ic(icn)}<span>${l}</span>${k === 'orders' && ready ? `<span class="count" title="${plural(ready, 'order')} ready to fulfill">${ready}</span>` : ''}</a>`).join('')}</nav>
     ${bm.length ? `<section aria-labelledby="side-bm"><h2 class="side-h" id="side-bm">Active batches</h2><nav class="nav bm" aria-labelledby="side-bm">${bm.map(b => `<a href="#batch/${b.id}" class="${b.id === bmOn ? 'on' : ''}" ${b.id === bmOn ? 'aria-current="page"' : ''}>${ic('batches')}<span>${esc(b.name)}<small>${batchNote(b)}</small></span></a>`).join('')}</nav></section>` : ''}
+    <section aria-labelledby="side-sc"><h2 class="side-h" id="side-sc">Sales channels</h2><nav class="nav bm" aria-labelledby="side-sc"><a href="#shopify" class="${nav === 'shopify' ? 'on' : ''}" ${nav === 'shopify' ? 'aria-current="page"' : ''}>${ic('store')}<span>Shopify<small>${shopNote()}</small></span></a></nav></section>
     <div class="side-foot"><span>Sample data<small>Nothing is sent and no real money moves.</small></span><button class="link" data-act="reset">Reset</button></div>`;
   $('#tabbar').innerHTML = NAV.map(([k, l, href, icn]) => `<a href="${href}" class="${k === nav ? 'on' : ''}" ${k === nav ? 'aria-current="page"' : ''}>${ic(icn)}${l}</a>`).join('');
   $('#newmenu').innerHTML = `<a href="#orders/new">${ic('orders')}New order</a><a href="#batches/new">${ic('batches')}New batch</a><hr><button data-act="add-product">${ic('box')}Add product</button><button data-act="add-customer">${ic('customers')}Add customer</button>`;
@@ -2053,7 +2605,8 @@ function render() {
   document.title = 'PreorderDesk';
 }
 window.addEventListener('hashchange', () => { if (modal) closeModal(); render(); window.scrollTo(0, 0); });
-window.addEventListener('storage', e => { if (e.key === KEY) { S = load(); render(); } });
+window.addEventListener('storage', e => { if (e.key === KEY) { S = load(); ensureShopify(); render(); } });
+ensureShopify();
 render();
 </script>
 </body>
