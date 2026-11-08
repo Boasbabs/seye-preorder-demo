@@ -10,6 +10,8 @@ A second concept lives in [`v3/`](v3/) and is published at https://preorderdesk.
 
 v3's **Shopify** page (under Sales channels) simulates orders arriving from Seye's Shopify store and being matched to customers, products and batches, with a To review list for anything unclear. Test orders use the real products, prices and photos from her public storefront, with made-up customers; the photos load from Shopify's CDN. **Import a Shopify export** reads an orders CSV inside the browser and never uploads it. Never commit a real export to this repository, because it holds customers' names, phone numbers and addresses.
 
+**Neutral demo** ([`v3/demo/`](v3/demo/), published at https://preorderdesk.getmayloo.com/demo/) is a copy of v3 for showing to other sellers. It uses a made-up "Demo Store" with made-up products, customers and Shopify orders, the Figtree font from Google Fonts, and its own storage key, so it never mixes with v3's data in the same browser. It is a separate file, so changes to v3 must be copied over by hand.
+
 ## Run
 
 Open `index.html` directly in a browser. No build, dependencies, or internet connection is required. For a local HTTP preview, run this from the prototype folder:
