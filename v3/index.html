@@ -234,6 +234,38 @@ img.thumb{display:block}
 .reasons li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--ink-3);flex:none;transform:translateY(-1px)}
 .reasons li span{flex:1}
 .reasons li .link,.reasons li a{font-size:13px;white-space:nowrap}
+/* Received progress (Shopify purchase order: "Total received: 0 of 3" and a bar per line) */
+.rbar{position:relative;height:6px;border-radius:3px;background:var(--fill-2);overflow:hidden;min-width:64px}
+.rbar i{position:absolute;left:0;top:0;bottom:0;background:var(--green);border-radius:3px}
+.rbar i.now{background:var(--blue)}
+.rcell{display:inline-flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:72px}
+.rcell .rbar{width:72px}
+.rtot{display:flex;align-items:center;gap:14px;margin:0 0 6px}
+.rtot .rbar{flex:1}
+.rtot span{white-space:nowrap;color:var(--ink-2);font-size:13px}
+/* Deliveries on a batch page (Shopify order page fulfillment cards, H&M "Package 1") */
+.dline{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px 0}
+.dline .thumb{width:36px;height:36px}
+.dline .num{color:var(--ink-2)}
+/* Receive items (Shopify "Receive items", Shopify split fulfillment checkboxes, Fresha "Receive order") */
+.rcv-g{border-top:1px solid var(--line-2);padding:10px 0}
+.rcv-g:first-of-type{border-top:0}
+.rcv-h,.rcv-i{display:grid;gap:12px;align-items:center}
+.rcv-h{grid-template-columns:18px 40px minmax(0,1fr) auto;cursor:pointer}
+.rcv-i{grid-template-columns:18px minmax(0,1fr) auto;padding:7px 0 7px 30px;font-size:13px;cursor:pointer}
+.rcv-i.done{cursor:default;color:var(--ink-2)}
+.rcv-i.done .ic{width:16px;height:16px;color:var(--green);stroke-width:2.2}
+.rcv-h input,.rcv-i input{width:18px;height:18px;margin:0;accent-color:var(--blue)}
+.rcv-h strong{display:block;font-weight:500}
+.rcv-h small,.rcv-i small{display:block;color:var(--ink-2);font-size:12px}
+.rcv-sp{display:grid;grid-template-columns:18px 40px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--line-2)}
+.rcv-sp strong{display:block;font-weight:500}
+.rcv-sp small{display:block;color:var(--ink-2);font-size:12px}
+.qty-in{display:inline-flex;align-items:center;gap:8px;color:var(--ink-2);font-size:13px}
+.qty-in input{width:64px;height:32px;border:1px solid var(--field);border-radius:8px;padding:0 8px;text-align:right;font-variant-numeric:tabular-nums;background:#fff}
+.qty-in input:focus{outline:none;border-color:var(--blue);box-shadow:var(--ring)}
+.rcv-top{display:flex;justify-content:space-between;align-items:baseline;gap:4px 12px;margin:2px 0 8px;flex-wrap:wrap}
+.rcv-top .label,.rcv-top .link{white-space:nowrap}
 .plist{list-style:none;margin:0;padding:0}
 .plist li{display:grid;grid-template-columns:76px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line-2)}
 .plist li:last-child{border-bottom:0}
@@ -531,6 +563,8 @@ body.public #app{display:none}
   .ed-bar [data-act="toggle-preview"]{display:none}
   .ed-body.with-preview .ed-preview{display:block}
   .phone-only{display:block}
+  .tbl .ph-hide{display:none}
+  .tbl td.ph-wrap{white-space:normal}
   .cmp{grid-template-columns:1fr}
   .todo .row{grid-template-columns:36px minmax(0,1fr)}
   .todo .row .btn{grid-column:2;justify-self:start}
@@ -660,20 +694,25 @@ function seed() {
   const s = {
     v: 3, seq: 1052, products, customers: [], orders: [],
     batches: [
-      { id: 'MAY', name: 'May batch', ref: 'SHP-2605', from: 'Ningbo', status: 'received', createdOn: rel(-112), closesOn: rel(-95), shippedOn: rel(-88), eta: rel(-21), receivedOn: rel(-21), ratePerKg: 2800, cost: null, spareKg: 30, spareUnits: 16, shelf: 'A', lineup: ['KB04'], log: [] },
-      { id: 'JUN', name: 'June batch', ref: 'SHP-2606', from: 'Guangzhou', status: 'received', createdOn: rel(-100), closesOn: rel(-82), shippedOn: rel(-80), eta: rel(-2), receivedOn: rel(-2), ratePerKg: null, cost: null, spareKg: 89, spareUnits: 8, shelf: 'B', lineup: ['CI07', 'GB12', 'HD02'], log: [] },
-      { id: 'AUG', name: 'August batch', ref: 'SHP-2607', from: 'Guangzhou', status: 'transit', createdOn: rel(-60), closesOn: rel(-42), shippedOn: rel(-41), eta: rel(9), receivedOn: null, ratePerKg: null, cost: null, spareKg: 40, spareUnits: 12, shelf: 'C', lineup: ['SP01', 'FA21', 'FA08'], log: [] },
-      { id: 'NOV', name: 'November batch', ref: 'SHP-2608', from: 'Guangzhou', status: 'open', createdOn: rel(-12), closesOn: rel(6), shippedOn: null, eta: null, receivedOn: null, ratePerKg: null, cost: null, spareKg: 0, spareUnits: 0, shelf: 'D', lineup: ['CI07', 'HD02', 'GB12'], log: [] },
+      { id: 'MAY', name: 'May batch', ref: 'SHP-2605', from: 'Ningbo', status: 'received', createdOn: rel(-112), closesOn: rel(-95), shippedOn: rel(-88), eta: rel(-21), receivedOn: rel(-21), ratePerKg: 2800, cost: null, spareKg: 30, spareUnits: 16, shelf: 'A', lineup: ['KB04'], log: [],
+        deliveries: [{ id: 'd1', date: rel(-21), spare: 16 }] },
+      /* Arriving in parts: the glass bowls came first, the dispenser and one cookware set a week later, and one cookware set is still to come */
+      { id: 'JUN', name: 'June batch', ref: 'SHP-2606', from: 'Guangzhou', status: 'partial', createdOn: rel(-100), closesOn: rel(-82), shippedOn: rel(-80), eta: rel(6), receivedOn: null, ratePerKg: null, cost: null, spareKg: 89, spareUnits: 8, shelf: 'B', lineup: ['CI07', 'GB12', 'HD02'], log: [],
+        deliveries: [{ id: 'd1', date: rel(-9), spare: 4 }, { id: 'd2', date: rel(-2), spare: 2 }] },
+      { id: 'AUG', name: 'August batch', ref: 'SHP-2607', from: 'Guangzhou', status: 'transit', createdOn: rel(-60), closesOn: rel(-42), shippedOn: rel(-41), eta: rel(9), receivedOn: null, ratePerKg: null, cost: null, spareKg: 40, spareUnits: 12, shelf: 'C', lineup: ['SP01', 'FA21', 'FA08'], log: [], deliveries: [] },
+      { id: 'NOV', name: 'November batch', ref: 'SHP-2608', from: 'Guangzhou', status: 'open', createdOn: rel(-12), closesOn: rel(6), shippedOn: null, eta: null, receivedOn: null, ratePerKg: null, cost: null, spareKg: 0, spareUnits: 0, shelf: 'D', lineup: ['CI07', 'HD02', 'GB12'], log: [], deliveries: [] },
     ],
   };
   const shelfNo = { A: 0, B: 0, C: 0, D: 0 };
   const B = id => s.batches.find(b => b.id === id);
+  /* An item arrives with one of its batch's deliveries: opt.d, or the only delivery of a batch received in one go */
+  const dOf = (b, opt) => b.deliveries.find(d => d.id === (opt.d || (b.status === 'received' ? 'd1' : null))) || null;
   const mk = (id, name, area, channel, created, items, pays, x = {}) => {
     const cid = 'c' + id;
     s.customers.push({ id: cid, name, area, phone: '+234 800 000 ' + id, instagram: x.ig || '', createdOn: rel(created) });
     const o = {
       id: String(id), customerId: cid, channel, created: rel(created),
-      items: items.map(([sku, batchId, opt = {}]) => ({ sku, qty: opt.qty || 1, price: products[sku].price, batchId, shipIncluded: !!opt.inc, handedOver: !!opt.done, released: false, shelf: null })),
+      items: items.map(([sku, batchId, opt = {}]) => { const d = dOf(B(batchId), opt); return { sku, qty: opt.qty || 1, price: products[sku].price, batchId, shipIncluded: !!opt.inc, handedOver: !!opt.done, released: false, shelf: null, receivedOn: d ? d.date : null, dId: d ? d.id : null }; }),
       delivery: x.delivery ? { method: x.delivery[0], fee: x.delivery[1] } : null,
       payments: pays.map(([amount, d, method], i) => ({ id: `p${id}-${i}`, amount, date: rel(d), method, ref: '' })),
       claims: x.claim ? [{ amount: x.claim[0], method: x.claim[1], ref: x.claim[2], date: TODAY }] : [],
@@ -687,7 +726,7 @@ function seed() {
     o.items.forEach(it => {
       const b = B(it.batchId), p = products[it.sku];
       if (b.shippedOn) L(b.shippedOn, `${p.name} shipped from ${b.from} with the ${b.name}`);
-      if (b.receivedOn) { it.shelf = b.shelf + (++shelfNo[b.shelf]); L(b.receivedOn, `${p.name} received in Lagos. Shelf ${it.shelf}`); }
+      if (it.receivedOn) { it.shelf = b.shelf + (++shelfNo[b.shelf]); L(it.receivedOn, `${p.name} received in Lagos. Shelf ${it.shelf}`); }
       if (b.ratePerKg != null && !it.shipIncluded) L(b.receivedOn, `Shipping of ${naira(Math.round(p.kg * it.qty * b.ratePerKg / 100) * 100)} added (${p.kg * it.qty} kg)`);
       if (b.ratePerKg != null) L(b.receivedOn, 'Balance request sent on WhatsApp');
     });
@@ -702,11 +741,12 @@ function seed() {
   mk(1040, 'Bisi Afolabi', 'Bodija', 'WhatsApp', -97, [['KB04', 'MAY']], [[47600, -96, 'Bank transfer'], [12800, -10, 'Bank transfer']], { delivery: ['courier', 6000], claim: [22000, 'Bank transfer', 'GTB 0391'], reminded: -4 });
   mk(1044, 'Zainab Bello', 'Gwarinpa', 'Website', -98, [['KB04', 'MAY']], [[68000, -97, 'Paystack'], [15900, -1, 'Paystack']], { delivery: ['courier', 7500] });
   mk(1045, 'Damilola Balogun', 'Yaba', 'WhatsApp', -96, [['KB04', 'MAY']], [[68000, -95, 'Bank transfer']], { delivery: ['courier', 4500], reminded: -6 });
+  // June batch, in delivery order so shelf numbers follow arrival: d1 (9 days ago), d2 (2 days ago), then Amaka's cookware still to come
+  mk(1047, 'Tolu Adeyemi', 'Wuse', 'Website', -91, [['GB12', 'JUN', { d: 'd1' }]], [[39000, -91, 'Paystack']]);
+  mk(1039, 'Ada Nwosu', 'Ajah', 'Website', -88, [['GB12', 'JUN', { inc: 1, d: 'd1' }]], [[27300, -88, 'Paystack']]);
+  mk(1043, 'Nneka Obi', 'Port Harcourt', 'Instagram', -90, [['HD02', 'JUN', { d: 'd2' }], ['SP01', 'AUG']], [[93000, -89, 'Bank transfer']], { ig: 'nnekaobi' });
+  mk(1042, 'Funmi Akinola', 'Surulere', 'WhatsApp', -89, [['CI07', 'JUN', { d: 'd2' }]], [[130000, -88, 'Bank transfer']]);
   mk(1048, 'Amaka Okafor', 'Lekki', 'Instagram', -93, [['CI07', 'JUN']], [[91000, -92, 'Bank transfer']], { ig: 'amaka.okafor' });
-  mk(1047, 'Tolu Adeyemi', 'Wuse', 'Website', -91, [['GB12', 'JUN']], [[39000, -91, 'Paystack']]);
-  mk(1043, 'Nneka Obi', 'Port Harcourt', 'Instagram', -90, [['HD02', 'JUN'], ['SP01', 'AUG']], [[93000, -89, 'Bank transfer']], { ig: 'nnekaobi' });
-  mk(1042, 'Funmi Akinola', 'Surulere', 'WhatsApp', -89, [['CI07', 'JUN']], [[130000, -88, 'Bank transfer']]);
-  mk(1039, 'Ada Nwosu', 'Ajah', 'Website', -88, [['GB12', 'JUN', { inc: 1 }]], [[27300, -88, 'Paystack']]);
   mk(1046, 'Chinwe Eze', 'Ikeja', 'WhatsApp', -52, [['FA21', 'AUG', { inc: 1 }]], [[31500, -51, 'Bank transfer']]);
   mk(1041, 'Aisha Ibrahim', 'Victoria Island', 'Instagram', -50, [['FA08', 'AUG']], [[36400, -50, 'Bank transfer']], { ig: 'aisha.ib' });
   mk(1049, 'Halima Musa', 'Kaduna', 'Instagram', -10, [['CI07', 'NOV']], [[91000, -10, 'Bank transfer']]);
@@ -719,14 +759,41 @@ function seed() {
     const L = (date, text) => date && b.log.push({ date, text, kind: 'event' });
     L(b.createdOn, 'Batch created. Taking preorders');
     L(b.shippedOn, `Marked as in transit from ${b.from}`);
-    L(b.receivedOn, 'Received in Lagos. Items given shelf numbers');
+    const lines = s.orders.flatMap(o => o.items.filter(i => i.batchId === b.id));
+    let left = sum(lines.map(i => i.qty)) + b.spareUnits;
+    b.deliveries.forEach((d, n) => {
+      const mine = lines.filter(i => i.dId === d.id).map(i => ({ name: products[i.sku].name, qty: i.qty }));
+      left -= sum(mine.map(l => l.qty)) + d.spare;
+      L(d.date, deliveryText(n + 1, mine, d.spare, left, n === b.deliveries.length - 1 ? b.eta : null));
+    });
     if (b.cost) L(b.receivedOn, `Freight and clearing cost of ${naira(b.cost)} added (${naira(b.ratePerKg)} per kg)`);
   });
   return s;
 }
+/* Batch timeline line for one delivery. lines: [{ name, qty }] */
+function deliveryText(n, lines, spare, left, eta) {
+  if (n === 1 && !left) return 'Received in Lagos. Items given shelf numbers';
+  const by = {};
+  lines.forEach(l => { by[l.name] = (by[l.name] || 0) + l.qty; });
+  const parts = Object.entries(by).map(([k, q]) => `${k} × ${q}`).concat(spare ? [`${spare} spare`] : []);
+  const units = sum(lines.map(l => l.qty)) + spare;
+  return `Delivery ${n} received in Lagos: ${plural(units, 'unit')} (${parts.join(', ')}). ${left ? `${plural(left, 'unit')} still to come${eta ? `, expected ${fmtY(eta)}` : ''}` : 'Everything has now arrived'}`;
+}
 
 /* ---------- State ---------- */
 function load() { try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 3) return s; } catch (e) { /* use seed */ } return seed(); }
+/* Data saved before batches could arrive in parts: a received batch becomes one delivery that brought everything */
+function ensureDeliveries() {
+  let changed = false;
+  S.batches.forEach(b => {
+    if (b.deliveries) return;
+    changed = true;
+    const got = ['received', 'closed'].includes(b.status) && b.receivedOn;
+    b.deliveries = got ? [{ id: 'd1', date: b.receivedOn, spare: b.spareUnits || 0 }] : [];
+    if (got) S.orders.forEach(o => o.items.forEach(i => { if (i.batchId === b.id && !i.receivedOn) { i.receivedOn = b.receivedOn; i.dId = 'd1'; } }));
+  });
+  if (changed) save();
+}
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('This browser couldn’t save the change. Try a smaller photo.'); } }
 let S = load();
 
@@ -742,6 +809,17 @@ const feeFor = area => (AREAS[area] || [null, 7500])[1];
 const statusUrl = id => location.origin + location.pathname + '#status/' + id;
 const batchKg = b => sum(ordersIn(b).flatMap(o => o.items.filter(i => i.batchId === b.id).map(i => P(i.sku).kg * i.qty))) + (b.spareKg || 0);
 const batchUnits = b => sum(ordersIn(b).flatMap(o => o.items.filter(i => i.batchId === b.id).map(i => i.qty)));
+/* Receiving in parts. An item is in Lagos once a delivery brought it; a batch counts its customers' units plus spare stock. */
+const isIn = i => i.handedOver || !!i.receivedOn;
+const batchLines = b => S.orders.flatMap(o => o.items.filter(i => i.batchId === b.id).map(i => ({ o, i })));
+const spareIn = b => sum((b.deliveries || []).map(d => d.spare));
+const batchTotal = b => batchUnits(b) + (b.spareUnits || 0);
+const batchGot = b => sum(batchLines(b).filter(x => isIn(x.i)).map(x => x.i.qty)) + spareIn(b);
+const batchLeft = b => batchTotal(b) - batchGot(b);
+const onTheWay = b => b.status === 'transit' || b.status === 'partial';
+const lastDelivery = b => (b.deliveries || []).slice(-1)[0] || null;
+const rbar = (got, total, now = 0) => `<div class="rbar" role="img" aria-label="${got} of ${total} received"><i style="width:${total ? Math.round((got + now) / total * 100) : 0}%" class="now"></i><i style="width:${total ? Math.round(got / total * 100) : 0}%"></i></div>`;
+const lc = s => s.charAt(0).toLowerCase() + s.slice(1);
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 function nextBatchName() {
   let m = new Date().getMonth();
@@ -751,11 +829,12 @@ function nextBatchName() {
 const nextRef = () => 'SHP-' + (Math.max(2600, ...S.batches.map(b => digits(b.ref))) + 1);
 const normPhone = s => { let d = digitStr(s); if (d.startsWith('234')) d = d.slice(3); if (d.startsWith('0')) d = d.slice(1); return d; };
 const fmtPhone = d => `+234 ${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}`.trim();
-const BATCH_PILL = { open: ['Taking orders', 'blue'], transit: ['In transit', 'blue'], received: ['Received', 'green'], closed: ['Closed', ''] };
+const BATCH_PILL = { open: ['Taking orders', 'blue'], transit: ['In transit', 'blue'], partial: ['Partially received', 'blue'], received: ['Received', 'green'], closed: ['Closed', ''] };
 const batchPill = b => pill(...BATCH_PILL[b.status]);
 function batchWhen(b) {
   if (b.status === 'open') return `taking orders until ${fmt(b.closesOn)}`;
   if (b.status === 'transit') return `in transit, expected ${fmt(b.eta)}`;
+  if (b.status === 'partial') return `partially received, the rest expected ${b.eta ? fmt(b.eta) : 'soon'}`;
   return `received ${fmt(b.receivedOn)}`;
 }
 
@@ -763,7 +842,7 @@ function batchWhen(b) {
 function calc(o) {
   const items = o.items.map(it => {
     const b = batchById(it.batchId), p = P(it.sku);
-    const here = it.handedOver || ['received', 'closed'].includes(b.status);
+    const here = isIn(it);
     const kg = p.kg * it.qty;
     const ship = it.shipIncluded ? 0 : (b.ratePerKg != null ? Math.round(kg * b.ratePerKg / 100) * 100 : null);
     return { ...it, b, p, here, kg, ship };
@@ -821,8 +900,13 @@ function todos() {
   if (noKg.length) T.push({ icon: 'box', tone: 'amber', href: '#shopify', title: `Add weights for ${plural(noKg.length, 'product')} from Shopify`, sub: 'Needed before a batch’s freight cost can be split by weight.' });
   const ready = all.filter(x => x.c.ready);
   if (ready.length) T.push({ icon: 'box', tone: 'green', href: '#orders?tab=ready', title: `${plural(ready.length, 'order')} ready to fulfill`, sub: andList(ready.map(x => esc(x.cu.name))) });
-  S.batches.filter(b => b.status === 'received' && b.ratePerKg == null).forEach(b => T.push({ icon: 'money', tone: 'amber', href: `#batch/${b.id}`, title: `Add freight cost for the ${b.name}`, sub: `Received ${ago(b.receivedOn)}. ${plural(ordersIn(b).length, 'customer')} are waiting for their final balance.` }));
-  S.batches.filter(b => b.status === 'transit' && dayDiff(b.eta) <= 1).forEach(b => T.push({ icon: 'ship', tone: 'blue', href: `#batch/${b.id}`, title: `Receive the ${b.name}`, sub: `Expected ${fmt(b.eta)}.` }));
+  S.batches.filter(b => (b.status === 'received' || b.status === 'partial') && b.ratePerKg == null).forEach(b => {
+    const waiting = ordersIn(b).filter(o => o.items.some(i => i.batchId === b.id && i.receivedOn && !i.handedOver)).length;
+    T.push({ icon: 'money', tone: 'amber', href: `#batch/${b.id}`, title: `Add freight cost for the ${b.name}`, sub: b.status === 'partial'
+      ? `${batchGot(b)} of ${batchTotal(b)} units arrived, the last ${ago(lastDelivery(b).date)}. ${plural(waiting, 'customer')} with items in Lagos ${waiting === 1 ? 'is' : 'are'} waiting for their final balance.`
+      : `Received ${ago(b.receivedOn)}. ${plural(ordersIn(b).length, 'customer')} are waiting for their final balance.` });
+  });
+  S.batches.filter(b => onTheWay(b) && b.eta && dayDiff(b.eta) <= 1).forEach(b => T.push({ icon: 'ship', tone: 'blue', href: `#batch/${b.id}`, title: b.status === 'partial' ? `Receive the rest of the ${b.name}` : `Receive the ${b.name}`, sub: b.status === 'partial' ? `${plural(batchLeft(b), 'unit')} still to come, expected ${fmt(b.eta)}.` : `Expected ${fmt(b.eta)}.` }));
   all.filter(x => !x.c.claim && x.c.final && x.c.owed > 0 && !x.c.delivered && (!x.o.remindedOn || dayDiff(x.o.remindedOn) <= -3)).forEach(({ o, c, cu }) => T.push({ icon: 'chat', tone: 'red', href: `#order/${o.id}`, title: `${esc(cu.name)} has a ${naira(c.owed)} balance`, sub: o.remindedOn ? `Last reminder sent ${ago(o.remindedOn)}.` : 'No reminder sent yet.' }));
   const noMethod = all.filter(x => x.c.reasons.some(r => r.key === 'delivery') && x.o.remindedOn && dayDiff(x.o.remindedOn) <= -2);
   if (noMethod.length) T.push({ icon: 'truck', tone: 'amber', href: '#orders?tab=hold', title: `${plural(noMethod.length, 'customer')} haven’t chosen a delivery method`, sub: andList(noMethod.map(x => esc(x.cu.name))) });
@@ -843,7 +927,7 @@ function homePage() {
   const due = sum(dueOrders.map(x => x.c.owed));
   const ready = all.filter(x => x.c.ready).length;
   const hold = all.filter(x => !x.c.delivered && !x.c.fulfillable.length).length;
-  const transit = S.batches.filter(b => b.status === 'transit');
+  const transit = S.batches.filter(onTheWay);
   const inflow = sum(S.orders.flatMap(o => o.payments.filter(p => dayDiff(p.date) >= -30).map(p => p.amount)));
   const T = todos();
   return `<div class="page">
@@ -860,7 +944,7 @@ function homePage() {
       <div class="ov-stats">
         <a href="#orders?tab=ready"><span class="label">Ready to fulfill</span><strong>${ready}</strong></a>
         <a href="#orders?tab=hold"><span class="label">On hold</span><strong>${hold}</strong></a>
-        <a href="#batches"><span class="label">In transit</span><strong>${plural(sum(transit.map(batchUnits)), 'unit')}</strong></a>
+        <a href="#batches" title="Units shipped and not yet in Lagos, including spare stock"><span class="label">In transit</span><strong>${plural(sum(transit.map(batchLeft)), 'unit')}</strong></a>
         <a href="#orders" title="Payments received in the last 30 days"><span class="label">Money in</span><strong class="green">${naira(inflow)}</strong></a>
       </div>
     </section>
@@ -920,8 +1004,9 @@ function orderRows(tab) {
 function lineRow(i) {
   let where;
   if (i.handedOver) where = '';
-  else if (i.here) where = `Shelf ${i.shelf || 'not set'}`;
+  else if (i.here) where = `${i.receivedOn ? `Arrived ${fmt(i.receivedOn)}. ` : ''}Shelf ${i.shelf || 'not set'}`;
   else if (i.b.status === 'open') where = `${i.b.name}, taking orders until ${fmt(i.b.closesOn)}`;
+  else if (i.b.status === 'partial') where = `${i.b.name}, in a later delivery${i.b.eta ? `, expected ${fmt(i.b.eta)}` : ''}`;
   else where = `${i.b.name}, expected ${fmt(i.b.eta)}`;
   return `<div class="line">${thumb(i.p)}<div><div class="ln">${esc(i.p.name)}</div><div class="ls">${[esc(i.p.variant), where].filter(Boolean).join('. ')}</div></div><div class="lq">${naira(i.price)} × ${i.qty}</div><div class="lt">${naira(i.price * i.qty)}</div></div>`;
 }
@@ -1030,23 +1115,23 @@ function timelineHTML(log, kind, id) {
 }
 
 function batchesPage() {
-  const order = { received: 0, transit: 1, open: 2, closed: 3 };
+  const order = { received: 0, partial: 1, transit: 2, open: 3, closed: 4 };
   const list = [...S.batches].sort((a, b) => order[a.status] - order[b.status] || toMs(b.createdOn) - toMs(a.createdOn));
-  const units = s => sum(S.batches.filter(b => b.status === s).map(batchUnits));
+  const rowNote = b => b.status === 'partial' ? `${batchGot(b)} of ${batchTotal(b)} received` : (b.status === 'received' || b.status === 'closed') && b.receivedOn ? `Received ${fmt(b.receivedOn)}` : b.eta && b.status !== 'open' ? `Expected ${fmt(b.eta)}` : `Closes ${fmt(b.closesOn)}`;
   return `<div class="page">
-    <div class="ph"><div><h1>Batches</h1><p class="sub">Each batch is one supplier order, shipped to Lagos together.</p></div><div class="acts"><a class="btn primary" href="#batches/new">${ic('plus')}New batch</a></div></div>
+    <div class="ph"><div><h1>Batches</h1><p class="sub">Each batch is one supplier order. It can reach Lagos in several deliveries.</p></div><div class="acts"><a class="btn primary" href="#batches/new">${ic('plus')}New batch</a></div></div>
     <section class="panel overview">
-      <div><span class="label">Taking orders</span><div class="big">${plural(units('open'), 'unit')}</div><span class="muted">${plural(openBatches().length, 'batch', 'batches')} open</span></div>
+      <div><span class="label">Taking orders</span><div class="big">${plural(sum(openBatches().map(batchUnits)), 'unit')}</div><span class="muted">${plural(openBatches().length, 'batch', 'batches')} open</span></div>
       <div class="ov-stats three">
-        <div><span class="label">In transit</span><strong>${plural(units('transit'), 'unit')}</strong></div>
+        <div title="Units shipped and not yet in Lagos, including spare stock"><span class="label">In transit</span><strong>${plural(sum(S.batches.filter(onTheWay).map(batchLeft)), 'unit')}</strong></div>
         <div><span class="label">Received, not fulfilled</span><strong>${plural(sum(S.orders.flatMap(o => calc(o).items.filter(i => i.here && !i.handedOver).map(i => i.qty))), 'unit')}</strong></div>
-        <div><span class="label">Spare stock</span><strong>${plural(sum(S.batches.filter(b => b.status !== 'open').map(b => b.spareUnits)), 'unit')}</strong></div>
+        <div title="Spare units that have arrived in Lagos"><span class="label">Spare stock</span><strong>${plural(sum(S.batches.map(spareIn)), 'unit')}</strong></div>
       </div>
     </section>
     <div class="tbl-wrap listify"><table class="tbl"><thead><tr><th>Batch</th><th>Route</th><th>Status</th><th class="r">Orders</th><th class="r">Received</th><th>Expected</th><th class="r">Freight cost</th></tr></thead><tbody>
-      ${list.map(b => { const u = batchUnits(b); return `<tr data-href="#batch/${b.id}"><td><a class="strong" href="#batch/${b.id}" style="color:inherit">${esc(b.name)}</a><small>${b.ref}</small></td><td class="muted">${esc(b.from)} to Lagos</td><td>${batchPill(b)}</td><td class="r">${ordersIn(b).length}</td><td class="r">${['received', 'closed'].includes(b.status) ? u : 0} of ${u}</td><td>${b.eta ? fmtY(b.eta) : '<span class="faint">Not set</span>'}</td><td class="r">${b.cost ? naira(b.cost) : '<span class="faint">Not added</span>'}</td></tr>`; }).join('')}
+      ${list.map(b => `<tr data-href="#batch/${b.id}"><td><a class="strong" href="#batch/${b.id}" style="color:inherit">${esc(b.name)}</a><small>${b.ref}</small></td><td class="muted">${esc(b.from)} to Lagos</td><td>${batchPill(b)}</td><td class="r">${ordersIn(b).length}</td><td class="r">${batchGot(b)} of ${batchTotal(b)}${b.status === 'partial' ? `<small>${plural(b.deliveries.length, 'delivery', 'deliveries')} so far</small>` : ''}</td><td>${b.eta ? `${fmtY(b.eta)}${b.status === 'partial' ? '<small>For the rest</small>' : ''}` : '<span class="faint">Not set</span>'}</td><td class="r">${b.cost ? naira(b.cost) : '<span class="faint">Not added</span>'}</td></tr>`).join('')}
     </tbody></table></div>
-    <ul class="rowlist">${list.map(b => `<li><a href="#batch/${b.id}"><span class="av md">${ic('ship')}</span><span><strong>${esc(b.name)}</strong><small>${esc(b.from)} to Lagos, ${plural(ordersIn(b).length, 'order')}</small></span><span class="r">${batchPill(b)}<small class="muted">${b.eta ? `Expected ${fmt(b.eta)}` : `Closes ${fmt(b.closesOn)}`}</small></span></a></li>`).join('')}</ul>
+    <ul class="rowlist">${list.map(b => `<li><a href="#batch/${b.id}"><span class="av md">${ic('ship')}</span><span><strong>${esc(b.name)}</strong><small>${esc(b.from)} to Lagos, ${plural(ordersIn(b).length, 'order')}</small></span><span class="r">${batchPill(b)}<small class="muted">${rowNote(b)}</small></span></a></li>`).join('')}</ul>
   </div>`;
 }
 
@@ -1054,17 +1139,32 @@ function batchPage(id) {
   const b = batchById(id);
   if (!b) return `<div class="page"><div class="empty"><strong>This batch doesn’t exist.</strong><a href="#batches">Back to batches</a></div></div>`;
   const os = ordersIn(b).map(o => ({ o, c: calc(o), cu: custOf(o) }));
-  const forOrders = {};
-  os.forEach(({ o }) => o.items.filter(i => i.batchId === b.id).forEach(i => { forOrders[i.sku] = (forOrders[i.sku] || 0) + i.qty; }));
+  const lines = batchLines(b).sort((x, y) => toMs(x.o.created) - toMs(y.o.created));
+  const forOrders = {}, gotBy = {};
+  lines.forEach(({ i }) => { forOrders[i.sku] = (forOrders[i.sku] || 0) + i.qty; if (isIn(i)) gotBy[i.sku] = (gotBy[i.sku] || 0) + i.qty; });
   const skus = [...new Set([...(b.lineup || []), ...Object.keys(forOrders)])];
   const kg = batchKg(b);
-  const got = ['received', 'closed'].includes(b.status);
+  const shipped = b.status !== 'open';
+  const dl = b.deliveries || [];
+  const got = batchGot(b), total = batchTotal(b), left = total - got;
   const readyN = os.filter(x => x.c.ready).length;
+  /* One blue action: the step the batch is at. While part of it is still at sea, receiving stays one tap away. */
+  const recv = tone => `<button class="btn ${tone}" data-act="receive" data-id="${b.id}">Receive items</button>`;
   let primary = '';
   if (b.status === 'open') primary = `<button class="btn primary" data-act="transit" data-id="${b.id}">Mark as in transit</button>`;
-  if (b.status === 'transit') primary = `<button class="btn primary" data-act="receive" data-id="${b.id}">Receive items</button>`;
-  if (b.status === 'received' && b.ratePerKg == null) primary = `<button class="btn primary" data-act="freight" data-id="${b.id}">Add freight cost</button>`;
-  if (b.status === 'received' && b.ratePerKg != null && readyN) primary = `<a class="btn primary" href="#orders?tab=ready">Fulfill orders</a>`;
+  else if (b.status === 'transit') primary = recv('primary');
+  else if (b.ratePerKg == null && (b.status === 'partial' || b.status === 'received')) primary = `${b.status === 'partial' ? recv('') : ''}<button class="btn primary" data-act="freight" data-id="${b.id}">Add freight cost</button>`;
+  else if (b.status === 'partial') primary = readyN ? `${recv('')}<a class="btn primary" href="#orders?tab=ready">Fulfill orders</a>` : recv('primary');
+  else if (b.status === 'received' && readyN) primary = `<a class="btn primary" href="#orders?tab=ready">Fulfill orders</a>`;
+  const rcell = (g, q) => `<span class="rcell">${rbar(g, q)}<span>${g} of ${q}</span></span>`;
+  const dRow = ({ o, i }) => `<div class="dline">${thumb(P(i.sku))}<div><div class="ln">${esc(P(i.sku).name)}</div><div class="ls">For <a href="#order/${o.id}">${esc(custOf(o).name)}</a>, #${o.id}${i.shelf ? `. Shelf ${i.shelf}` : ''}${i.handedOver ? '. Fulfilled' : ''}</div></div><div class="num">× ${i.qty}</div></div>`;
+  const spareRow = n => n ? `<div class="dline">${thumb({ icon: 'box' })}<div><div class="ln">Spare stock</div><div class="ls">To sell later</div></div><div class="num">× ${n}</div></div>` : '';
+  const still = lines.filter(x => !isIn(x.i));
+  const deliveriesHTML = !dl.length ? '' : `<section class="sec">
+          <div class="sec-h"><h2>Deliveries <span class="n">${dl.length}</span></h2></div>
+          ${left ? `<div class="group"><div class="group-h">${pill(`Still to come (${left})`)}<span class="muted">${b.eta ? `Expected ${fmtY(b.eta)}` : 'Expected date not set'}</span></div>${still.map(dRow).join('')}${spareRow((b.spareUnits || 0) - spareIn(b))}</div>` : ''}
+          ${[...dl].reverse().map(d => { const mine = lines.filter(x => x.i.dId === d.id); return `<div class="group"><div class="group-h">${pill(`Received (${sum(mine.map(x => x.i.qty)) + d.spare})`, 'green', 'check')}<span class="muted">Delivery ${dl.indexOf(d) + 1}, ${fmtY(d.date)}</span></div>${mine.map(dRow).join('')}${spareRow(d.spare)}</div>`; }).join('')}
+        </section>`;
   return `<div class="page">
     <a class="crumb" href="#batches">${ic('chevL')}Batches</a>
     <div class="ph">
@@ -1075,11 +1175,13 @@ function batchPage(id) {
       <div class="d-main">
         <section class="sec">
           <div class="sec-h"><h2>Products <span class="n">${skus.length}</span></h2>${b.status === 'open' ? `<div class="acts"><button class="btn sm" data-act="batch-products" data-id="${b.id}">${ic('plus')}Add products</button></div>` : ''}</div>
-          <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Product</th><th class="r">Price</th><th class="r">Preordered</th><th class="r">Weight</th><th class="r">${got ? 'Received' : 'Arrives'}</th></tr></thead><tbody>
-            ${skus.map(k => { const p = P(k), q = forOrders[k] || 0; return `<tr><td><span class="who">${thumb(p, 'sm')}<span><span class="strong">${esc(p.name)}</span><small>${esc(p.variant || '')}</small></span></span></td><td class="r">${naira(p.price)}</td><td class="r">${q}</td><td class="r">${p.kg == null ? pill('Weight needed', 'amber') : `${p.kg * q} kg`}</td><td class="r">${got ? `${q} of ${q}` : '<span class="faint">' + (b.eta ? fmt(b.eta) : 'Not set') + '</span>'}</td></tr>`; }).join('')}
-            ${b.spareUnits ? `<tr><td class="muted">Spare stock to sell</td><td></td><td class="r">${b.spareUnits}</td><td class="r">${b.spareKg} kg</td><td class="r">${got ? `${b.spareUnits} of ${b.spareUnits}` : ''}</td></tr>` : ''}
+          ${shipped ? `<div class="rtot">${rbar(got, total)}<span>Total received: ${got} of ${total} units</span></div>` : ''}
+          <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Product</th><th class="r ph-hide">Price</th><th class="r">Preordered</th><th class="r ph-hide">Weight</th><th class="r">${shipped ? 'Received' : 'Arrives'}</th></tr></thead><tbody>
+            ${skus.map(k => { const p = P(k), q = forOrders[k] || 0; return `<tr><td class="ph-wrap"><span class="who">${thumb(p, 'sm')}<span><span class="strong">${esc(p.name)}</span><small>${esc(p.variant || '')}</small></span></span></td><td class="r ph-hide">${naira(p.price)}</td><td class="r">${q}</td><td class="r ph-hide">${p.kg == null ? pill('Weight needed', 'amber') : `${p.kg * q} kg`}</td><td class="r">${shipped ? rcell(gotBy[k] || 0, q) : '<span class="faint">' + (b.eta ? fmt(b.eta) : 'Not set') + '</span>'}</td></tr>`; }).join('')}
+            ${b.spareUnits ? `<tr><td class="muted ph-wrap">Spare stock to sell</td><td class="ph-hide"></td><td class="r">${b.spareUnits}</td><td class="r ph-hide">${b.spareKg} kg</td><td class="r">${shipped ? rcell(spareIn(b), b.spareUnits) : ''}</td></tr>` : ''}
           </tbody></table></div>
         </section>
+        ${deliveriesHTML}
         <section class="sec">
           <div class="sec-h"><h2>Orders <span class="n">${os.length}</span></h2>${b.status === 'open' ? `<div class="acts"><button class="btn sm" data-act="order-in-batch" data-id="${b.id}">${ic('plus')}New order</button></div>` : ''}</div>
           ${os.length ? orderTable(os) : '<div class="tbl-empty">No orders yet. Share the batch with customers, then add their preorders here.</div>'}
@@ -1087,13 +1189,14 @@ function batchPage(id) {
       </div>
       <aside class="d-side">
         <section class="sec">
-          <div class="sec-h"><h2>Cost summary</h2>${b.status === 'received' && b.ratePerKg != null ? `<button class="link" data-act="freight" data-id="${b.id}">Edit</button>` : ''}</div>
+          <div class="sec-h"><h2>Cost summary</h2>${(b.status === 'received' || b.status === 'partial') && b.ratePerKg != null ? `<button class="link" data-act="freight" data-id="${b.id}">Edit</button>` : ''}</div>
           <div class="kv">
             <span>Freight and clearing</span><span>${b.cost ? naira(b.cost) : '<span class="faint">Not added</span>'}</span>
             <span>Total weight</span><span>${kg} kg</span>
             <span>Per kg</span><span>${b.ratePerKg != null ? naira(b.ratePerKg) : '<span class="faint">Pending</span>'}</span>
           </div>
-          ${['open', 'transit'].includes(b.status) ? '<p class="help">Add the cost once the batch is received. It’s split across items by weight.</p>' : ''}
+          ${['open', 'transit'].includes(b.status) ? '<p class="help">Add the cost once items start arriving. It’s split across items by weight.</p>' : ''}
+          ${b.status === 'partial' && b.ratePerKg == null ? '<p class="help">Add it now, so customers whose items have arrived can see their final balance. It’s split across the whole batch by weight, including what’s still to come.</p>' : ''}
         </section>
         <section class="sec">
           <div class="sec-h"><h2>Details</h2></div>
@@ -1101,8 +1204,8 @@ function batchPage(id) {
             <li><div class="fh">Ships from</div><p>${esc(b.from)}</p></li>
             <li><div class="fh">Orders close</div><p>${fmtY(b.closesOn)}</p></li>
             <li><div class="fh">Shipped</div><p>${b.shippedOn ? fmtY(b.shippedOn) : '<span class="faint">Not yet</span>'}</p></li>
-            <li><div class="fh">Expected in Lagos</div><p>${b.eta ? fmtY(b.eta) : '<span class="faint">Not set</span>'}</p></li>
-            <li><div class="fh">Received</div><p>${b.receivedOn ? fmtY(b.receivedOn) : '<span class="faint">Not yet</span>'}</p></li>
+            <li><div class="fh">${b.status === 'partial' ? 'The rest expected' : 'Expected in Lagos'}</div><p>${b.eta ? fmtY(b.eta) : '<span class="faint">Not set</span>'}</p></li>
+            <li><div class="fh">Received</div><p>${!dl.length ? '<span class="faint">Not yet</span>' : left ? `${got} of ${total} units` : fmtY(b.receivedOn || lastDelivery(b).date)}</p>${dl.length ? `<p class="muted">${dl.length === 1 ? 'In one delivery' : `In ${dl.length} deliveries`}${left ? `, the last on ${fmt(lastDelivery(b).date)}` : ''}</p>` : ''}</li>
           </ul>
         </section>
       </aside>
@@ -1371,7 +1474,7 @@ function drawBESum() {
 function createBatch() {
   const keys = Object.keys(bd.lines);
   const used = S.batches.map(x => x.shelf);
-  const b = { id: 'B' + Date.now(), name: bd.name.trim(), ref: nextRef(), from: bd.from, status: 'open', createdOn: TODAY, closesOn: bd.closesOn, shippedOn: null, eta: bd.eta || null, receivedOn: null, ratePerKg: null, cost: null,
+  const b = { id: 'B' + Date.now(), name: bd.name.trim(), ref: nextRef(), from: bd.from, status: 'open', createdOn: TODAY, closesOn: bd.closesOn, shippedOn: null, eta: bd.eta || null, receivedOn: null, ratePerKg: null, cost: null, deliveries: [],
     spareUnits: sum(keys.map(k => bd.lines[k].spare)), spareKg: sum(keys.map(k => P(k).kg * bd.lines[k].spare)), shelf: 'EFGHIJKLMNOPQRSTUVWXYZ'.split('').find(l => !used.includes(l)) || 'Z', lineup: keys, log: [] };
   b.log.push({ date: TODAY, text: `Batch created with ${plural(keys.length, 'product')}. Taking preorders until ${fmtY(b.closesOn)}`, kind: 'event' });
   if (b.spareUnits) b.log.push({ date: TODAY, text: `${plural(b.spareUnits, 'spare unit')} added for stock`, kind: 'event' });
@@ -1385,7 +1488,7 @@ function statusBody(o, { preview = false } = {}) {
   const bs = [...new Set(o.items.map(i => i.batchId))].map(batchById);
   const allShipped = bs.every(b => b.status !== 'open');
   const shippedOn = allShipped ? bs.map(b => b.shippedOn).sort().pop() : null;
-  const arrivedOn = c.missing.length === 0 ? bs.map(b => b.receivedOn).filter(Boolean).sort().pop() : null;
+  const arrivedOn = c.missing.length === 0 ? c.items.map(i => i.receivedOn).filter(Boolean).sort().pop() || null : null;
   const pickup = o.delivery && o.delivery.method === 'pickup';
   const steps = [
     ['Ordered', fmt(o.created), true],
@@ -1395,12 +1498,13 @@ function statusBody(o, { preview = false } = {}) {
     [pickup ? 'Picked up' : 'Delivered', c.delivered ? fmt(o.deliveredOn) : '', c.delivered],
   ];
   const doneN = steps.filter(s => s[2]).length;
-  const late = c.missing.filter(i => i.b.status !== 'open').map(i => i.b.eta).sort().pop();
+  const late = c.missing.filter(i => i.b.status !== 'open').map(i => i.b.eta).filter(Boolean).sort().pop();
   let h, lead;
   if (c.delivered) { h = pickup ? 'Your order has been picked up' : 'Your order has been delivered'; lead = `Completed on ${fmtY(o.deliveredOn)}. Thank you for ordering with ${STORE.name}.`; }
   else if (c.ready) { h = pickup ? 'Your order is ready for pickup' : 'Your order is ready for delivery'; lead = pickup ? `Collect it from our ${STORE.hub}, Monday to Saturday, 10am to 6pm.` : `We’re booking a courier to ${esc(placeOf(cu.area))}. They’ll call before they arrive.`; }
   else if (!c.missing.length) { h = 'Your order has arrived in Lagos'; lead = !c.shipKnown ? 'We’re working out shipping costs. We’ll message you with your final balance.' : !o.delivery ? 'Choose pickup or delivery to see your final balance.' : 'Pay your balance and we’ll get it to you.'; }
   else if (c.items.some(i => i.here && !i.handedOver)) { h = 'Part of your order has arrived'; lead = `We’ll keep it safe in Lagos until the rest arrives${late ? `, expected ${fmtY(late)}` : ''}, so everything comes to you together.`; }
+  else if (allShipped && c.missing.every(i => i.b.status === 'partial')) { h = 'Your order is on its way to Lagos'; lead = `Part of this shipment has already reached Lagos. ${c.missing.length === c.items.length ? 'Your order is' : 'Your items are'} coming in a later delivery${late ? `, expected around ${fmtY(late)}` : ''}.`; }
   else if (allShipped) { h = 'Your order is on its way to Lagos'; lead = `Expected in Lagos around ${fmtY(late)}.`; }
   else { const b = c.missing[0].b; h = 'Your order is confirmed'; lead = `We’re collecting orders until ${fmtY(b.closesOn)}, then it ships from ${esc(b.from)}. Shipping is worked out by weight when it arrives.`; }
   const needsMethod = !c.missing.length && c.shipKnown && !o.delivery && !c.delivered;
@@ -1420,7 +1524,14 @@ function statusBody(o, { preview = false } = {}) {
     : o.delivery ? `<div class="pcard" style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><span><span class="label">Delivery method</span><p style="font-weight:600;margin-top:2px">${pickup ? `Pickup at ${STORE.hub}` : `Delivery to ${esc(placeOf(cu.area))}`}</p></span>${!c.ready && !c.items.some(i => i.handedOver) ? `<button class="link" data-act="pub-change" data-id="${o.id}">Change</button>` : ''}</div>` : '';
   const ev = [{ date: o.created, text: 'Order confirmed' }];
   o.payments.forEach((p, n) => ev.push({ date: p.date, text: `${n === 0 && !p.label ? 'Deposit' : 'Payment'} of ${naira(p.amount)} received` }));
-  bs.forEach(b => { if (b.shippedOn) ev.push({ date: b.shippedOn, text: `Shipped from ${b.from}` }); if (b.receivedOn) ev.push({ date: b.receivedOn, text: bs.length > 1 ? `${andList(o.items.filter(i => i.batchId === b.id).map(i => P(i.sku).name))} arrived in Lagos` : 'Arrived in Lagos' }); });
+  bs.forEach(b => { if (b.shippedOn) ev.push({ date: b.shippedOn, text: `Shipped from ${b.from}` }); });
+  /* One update per arrival date, naming the items unless the whole order came at once */
+  const arrivals = {};
+  c.items.filter(i => i.receivedOn).forEach(i => { (arrivals[i.receivedOn] = arrivals[i.receivedOn] || []).push(i); });
+  const inOne = Object.keys(arrivals).length === 1 && !c.missing.length;
+  Object.entries(arrivals).forEach(([d, is]) => ev.push({ date: d, text: inOne ? 'Arrived in Lagos' : `${andList(is.map(i => i.p.name))} arrived in Lagos` }));
+  const mixed = !c.delivered && c.items.some(i => i.here) && c.missing.length > 0;
+  const itemState = i => i.handedOver ? (pickup ? 'Picked up' : 'Delivered') : i.here ? `In Lagos since ${fmt(i.receivedOn)}` : i.b.status === 'open' ? `Ships after ${fmt(i.b.closesOn)}` : i.b.eta ? `Expected ${fmt(i.b.eta)}` : 'On its way';
   if (o.deliveredOn) ev.push({ date: o.deliveredOn, text: pickup ? 'Picked up' : 'Delivered' });
   ev.sort((a, b) => toMs(b.date) - toMs(a.date));
   return `<div class="pub">
@@ -1431,7 +1542,7 @@ function statusBody(o, { preview = false } = {}) {
     <div class="pcard"><div class="stepper-h"><i class="fill" style="width:${(doneN - 1) * 20}%"></i>${steps.map((s, n) => `<div class="step ${s[2] ? 'done' : ''} ${n === doneN - 1 ? 'now' : ''}"><i></i>${s[0]}${s[1] ? `<small>${s[1]}</small>` : ''}</div>`).join('')}</div></div>
     ${methodBlock}
     ${payBlock}
-    <div class="pcard"><h3>Order summary</h3>${c.items.map(i => `<div class="pline">${thumb(i.p)}<div><div class="ln">${esc(i.p.name)}${i.qty > 1 ? ` × ${i.qty}` : ''}</div><div class="ls">${esc(i.p.variant || '')}</div></div><div class="lt">${naira(i.price * i.qty)}</div></div>`).join('')}
+    <div class="pcard"><h3>Order summary</h3>${c.items.map(i => `<div class="pline">${thumb(i.p)}<div><div class="ln">${esc(i.p.name)}${i.qty > 1 ? ` × ${i.qty}` : ''}</div><div class="ls">${esc(i.p.variant || '')}${mixed ? `${i.p.variant ? '. ' : ''}${itemState(i)}` : ''}</div></div><div class="lt">${naira(i.price * i.qty)}</div></div>`).join('')}
       <div class="kv">
         <span>Subtotal</span><span>${naira(c.goods)}</span>
         ${c.discount ? `<span>Discount</span><span>${naira(-c.discount)}</span>` : ''}
@@ -1784,29 +1895,107 @@ function transitModal(b) {
     },
   });
 }
+/* Receive items, one delivery at a time. A batch can reach Lagos in parts: tick the items that came, per customer or per product,
+   and the rest stays on its way. (Shopify "Receive items" with "Total received" and a bar per line; Shopify split fulfillment
+   checkboxes with "10 items selected"; Fresha "Receive order" with Ordered and Received; Fresha "Stock order partially received".) */
 function receiveModal(b) {
-  const lines = {};
-  ordersIn(b).forEach(o => o.items.filter(i => i.batchId === b.id).forEach(i => { lines[i.sku] = (lines[i.sku] || 0) + i.qty; }));
+  const lines = batchLines(b).sort((x, y) => toMs(x.o.created) - toMs(y.o.created));
+  const skus = [...new Set([...(b.lineup || []), ...lines.map(x => x.i.sku)])].filter(k => lines.some(x => x.i.sku === k));
+  const keyOf = x => `${x.o.id}:${x.o.items.indexOf(x.i)}`;
+  const waiting = lines.filter(x => !isIn(x.i));
+  const spareLeft = (b.spareUnits || 0) - spareIn(b);
+  const total = batchTotal(b), before = batchGot(b);
+  const last = lastDelivery(b);
+  const sel = new Set();
+  const L = { date: TODAY, spare: 0, rest: b.eta && b.eta > TODAY ? b.eta : rel(7), notify: true };
+  const chosen = () => waiting.filter(x => sel.has(keyOf(x)));
+  const nowUnits = () => sum(chosen().map(x => x.i.qty)) + L.spare;
+  const who = x => `#${x.o.id} ${esc(custOf(x.o).name)}`;
   openModal({
-    title: `Receive the ${b.name}`,
-    body: () => `<div class="tbl-wrap" style="margin:0"><table class="tbl"><thead><tr><th>Product</th><th class="r">Expected</th></tr></thead><tbody>${Object.entries(lines).map(([k, q]) => `<tr><td><span class="who">${thumb(P(k), 'sm')}<span><span class="strong">${esc(P(k).name)}</span><small>${esc(P(k).variant || '')}</small></span></span></td><td class="r">${q}</td></tr>`).join('')}${b.spareUnits ? `<tr><td class="muted">Spare stock</td><td class="r">${b.spareUnits}</td></tr>` : ''}</tbody></table></div>
-      <p class="help" style="margin-top:12px">Each item gets a shelf number. Next, add the freight cost so customers can see their final balance.</p>`,
-    foot: () => `${cancelBtn}<button class="btn primary" id="rc-go">Receive items</button>`,
+    title: `Receive items`,
+    body: () => `<p>${esc(b.name)}, ${b.ref}. ${last ? `${plural(b.deliveries.length, 'delivery', 'deliveries')} recorded so far. ` : ''}Tick what arrived in this delivery. Anything you leave stays on its way.</p>
+      <div class="grid2">
+        <div class="field"><label for="rc-date">Received on</label><input id="rc-date" type="date" value="${L.date}" max="${TODAY}" min="${last ? last.date : (b.shippedOn || '')}"></div>
+        <div class="field" id="rc-rest-f"><label for="rc-rest">The rest expected</label><input id="rc-rest" type="date" value="${L.rest}" min="${TODAY}"></div>
+      </div>
+      <div class="rcv-top"><span class="label" id="rc-tot"></span>${waiting.length || spareLeft ? '<button type="button" class="link" id="rc-all">Select everything still to come</button>' : ''}</div>
+      <div id="rc-bar" style="margin-bottom:10px"></div>
+      ${skus.map(k => { const its = lines.filter(x => x.i.sku === k), p = P(k), wait = its.filter(x => !isIn(x.i)); return `<div class="rcv-g">
+        <label class="rcv-h"><input type="checkbox" data-sku="${k}" ${wait.length ? '' : 'checked disabled'} aria-label="All ${esc(p.name)}">${thumb(p)}<span><strong>${esc(p.name)}</strong><small>${esc(p.variant || '')}</small></span><span class="num muted" data-cnt="${k}"></span></label>
+        ${its.map(x => isIn(x.i)
+          ? `<div class="rcv-i done">${ic('check')}<span>${who(x)}<small>Received ${fmt(x.i.receivedOn)}${x.i.shelf ? `, shelf ${x.i.shelf}` : ''}</small></span><span class="num">× ${x.i.qty}</span></div>`
+          : `<label class="rcv-i"><input type="checkbox" data-k="${keyOf(x)}" data-of="${k}"><span>${who(x)}<small>Ordered ${fmt(x.o.created)}</small></span><span class="num">× ${x.i.qty}</span></label>`).join('')}
+      </div>`; }).join('')}
+      ${b.spareUnits ? `<div class="rcv-sp"><span></span>${thumb({ icon: 'box' })}<span><strong>Spare stock</strong><small>${spareIn(b)} of ${b.spareUnits} received so far</small></span>${spareLeft ? `<span class="qty-in"><input id="rc-spare" type="number" min="0" max="${spareLeft}" value="0" inputmode="numeric" aria-label="Spare units in this delivery">of ${spareLeft}</span>` : '<span class="num muted">All in</span>'}</div>` : ''}
+      <label class="check" id="rc-notify-l"><input type="checkbox" id="rc-notify" checked> Send customers whose items arrived an update on WhatsApp</label>
+      <p class="help">Each item gets a shelf number. Orders whose items have all arrived can move on while the rest of the batch is on its way.</p>`,
+    foot: () => `<span class="left" id="rc-left"></span>${cancelBtn}<button class="btn primary" id="rc-go" disabled>Receive items</button>`,
     mount(el) {
-      $('#rc-go', el).addEventListener('click', () => {
-        commit(() => {
-          b.status = 'received'; b.receivedOn = TODAY; let n = 0;
-          ordersIn(b).forEach(o => o.items.filter(i => i.batchId === b.id).forEach(i => { i.shelf = b.shelf + (++n); logTo(o, `${P(i.sku).name} received in Lagos. Shelf ${i.shelf}`); }));
-          blog(b, 'Received in Lagos. Items given shelf numbers');
+      const upd = () => {
+        const n = nowUnits(), after = before + n;
+        $('#rc-tot', el).textContent = `Total received: ${after} of ${total} units`;
+        $('#rc-bar', el).innerHTML = rbar(before, total, n);
+        skus.forEach(k => {
+          const its = lines.filter(x => x.i.sku === k), wait = its.filter(x => !isIn(x.i)), on = wait.filter(x => sel.has(keyOf(x)));
+          $(`[data-cnt="${k}"]`, el).textContent = `${sum(its.filter(x => isIn(x.i)).map(x => x.i.qty)) + sum(on.map(x => x.i.qty))} of ${sum(its.map(x => x.i.qty))}`;
+          const box = $(`[data-sku="${k}"]`, el);
+          if (wait.length) { box.checked = on.length === wait.length; box.indeterminate = on.length > 0 && on.length < wait.length; }
         });
-        closeModal(); toast('Items received');
+        $('#rc-rest-f', el).hidden = after >= total;
+        $('#rc-notify-l', el).hidden = !chosen().length;
+        $('#rc-left', el).textContent = !n ? 'Nothing ticked yet' : after < total ? `${total - after} still to come` : 'Everything will have arrived';
+        const go = $('#rc-go', el);
+        go.disabled = !n || !L.date;
+        go.textContent = n ? `Receive ${plural(n, 'unit')}` : 'Receive items';
+      };
+      $$('[data-k]', el).forEach(c => c.addEventListener('change', () => { if (c.checked) sel.add(c.dataset.k); else sel.delete(c.dataset.k); upd(); }));
+      $$('[data-sku]', el).forEach(c => c.addEventListener('change', () => {
+        waiting.filter(x => x.i.sku === c.dataset.sku).forEach(x => { if (c.checked) sel.add(keyOf(x)); else sel.delete(keyOf(x)); });
+        $$(`[data-of="${c.dataset.sku}"]`, el).forEach(x => { x.checked = c.checked; });
+        upd();
+      }));
+      const sp = $('#rc-spare', el);
+      if (sp) {
+        sp.addEventListener('input', () => { L.spare = Math.max(0, Math.min(spareLeft, Math.floor(Number(sp.value) || 0))); upd(); });
+        sp.addEventListener('change', () => { sp.value = L.spare; });
+      }
+      const all = $('#rc-all', el);
+      if (all) all.addEventListener('click', () => { waiting.forEach(x => sel.add(keyOf(x))); $$('[data-k]', el).forEach(x => { x.checked = true; }); if (sp) { sp.value = spareLeft; L.spare = spareLeft; } upd(); });
+      $('#rc-date', el).addEventListener('change', e => { L.date = e.target.value; upd(); });
+      $('#rc-rest', el).addEventListener('change', e => { L.rest = e.target.value; });
+      $('#rc-notify', el).addEventListener('change', e => { L.notify = e.target.checked; });
+      $('#rc-go', el).addEventListener('click', () => {
+        const picks = chosen();
+        if (!picks.length && !L.spare) return;
+        const date = L.date > TODAY ? TODAY : L.date;
+        let left = 0;
+        commit(() => {
+          const d = { id: 'd' + (b.deliveries.length + 1), date, spare: L.spare };
+          b.deliveries.push(d);
+          let n = Math.max(0, ...batchLines(b).map(x => Number(String(x.i.shelf || '').slice(b.shelf.length)) || 0));
+          picks.forEach(({ o, i }) => { i.receivedOn = date; i.dId = d.id; i.shelf = b.shelf + (++n); o.log.push({ date, text: `${P(i.sku).name} received in Lagos. Shelf ${i.shelf}`, kind: 'event' }); });
+          left = batchLeft(b);
+          if (left) { b.status = 'partial'; b.eta = L.rest || b.eta; } else { b.status = 'received'; b.receivedOn = date; }
+          b.log.push({ date, text: deliveryText(b.deliveries.length, picks.map(x => ({ name: P(x.i.sku).name, qty: x.i.qty })), d.spare, left, left ? b.eta : null), kind: 'event' });
+        });
+        const os = [...new Set(picks.map(x => x.o))];
+        const done = left ? `Delivery recorded. ${plural(left, 'unit')} still to come` : 'Everything has arrived';
+        if (L.notify && os.length) reviewModal(os, msgBalance, 'Arrival update sent on WhatsApp', { done, remind: o => { const c = calc(o); return !c.missing.length && c.shipKnown; } });
+        else { closeModal(); toast(done); }
       });
+      upd();
     },
   });
 }
+/* What the customer hears when their items reach Lagos, or when shipping is worked out */
 function msgBalance(o) {
   const c = calc(o), f = first(custOf(o).name);
-  if (c.missing.length) return `Hi ${f}, part of your order #${o.id} has arrived in Lagos. We’ll keep it safe until the rest arrives, so everything comes to you together. Follow your order here:\n${statusUrl(o.id)}\n\n${STORE.owner}`;
+  const here = c.items.filter(i => i.here && !i.handedOver);
+  if (c.missing.length) {
+    const late = c.missing.filter(i => i.b.status !== 'open').map(i => i.b.eta).filter(Boolean).sort().pop();
+    return `Hi ${f}, part of your order #${o.id} has arrived in Lagos${here.length ? `: ${andList(here.map(i => 'the ' + lc(i.p.name)))}` : ''}.${late ? ` The rest is expected around ${fmt(late)}.` : ''} We’ll keep everything safe until then, so it all comes to you together. Follow your order here:\n${statusUrl(o.id)}\n\n${STORE.owner}`;
+  }
+  if (!c.shipKnown) return `Hi ${f}, your order #${o.id} has arrived in Lagos. We’re working out shipping by weight and will send your final balance soon. Follow your order here:\n${statusUrl(o.id)}\n\n${STORE.owner}`;
   return `Hi ${f}, your order #${o.id} has arrived in Lagos. ${c.items.every(i => i.shipIncluded) ? 'Shipping was included in your price.' : `Shipping comes to ${naira(c.ship)}.`} ${c.owed > 0 ? `Your balance is ${naira(c.owed)}, plus delivery if you choose it.` : 'You’re fully paid up.'} Choose pickup or delivery and pay here:\n${statusUrl(o.id)}\n\n${STORE.owner}`;
 }
 function freightModal(b) {
@@ -1830,7 +2019,8 @@ function freightModal(b) {
     body: () => `<div class="field"><label for="fr-amt">Total cost for this batch</label><div class="input-pre"><span>₦</span><input id="fr-amt" inputmode="numeric" autocomplete="off" value="${L.cost ? L.cost.toLocaleString('en-NG') : ''}"></div>
         <p class="help">Split by weight across ${kg} kg, including ${b.spareKg} kg of spare stock you keep. ${prev ? `<button type="button" class="link" id="fr-last">Use the ${esc(prev.name)} rate (${naira(prev.ratePerKg)} per kg)</button>` : ''}</p></div>
       <div class="tbl-wrap" style="margin:0"><table class="tbl"><thead><tr><th>Customer</th><th class="r">Weight</th><th class="r">Shipping</th><th class="r">Balance</th></tr></thead><tbody id="fr-rows"></tbody></table></div>
-      <label class="check" style="margin-top:14px"><input type="checkbox" id="fr-notify" checked> Send each customer their new balance on WhatsApp</label>`,
+      <label class="check" style="margin-top:14px"><input type="checkbox" id="fr-notify" checked> ${b.status === 'partial' ? 'Send customers whose items have arrived their new balance on WhatsApp' : 'Send each customer their new balance on WhatsApp'}</label>
+      ${b.status === 'partial' ? '<p class="help" style="margin-top:-6px">Customers still waiting for their items get it when their items arrive.</p>' : ''}`,
     foot: () => `${cancelBtn}<button class="btn primary" id="fr-go" disabled>Save</button>`,
     mount(el) {
       const go = $('#fr-go', el), rows = $('#fr-rows', el), inp = $('#fr-amt', el);
@@ -1844,19 +2034,20 @@ function freightModal(b) {
       upd();
       go.addEventListener('click', () => {
         const notify = $('#fr-notify', el).checked, os = ordersIn(b);
+        const tell = os.filter(o => o.items.some(i => i.batchId === b.id && i.receivedOn && !i.handedOver));
         commit(() => {
           b.cost = L.cost; b.ratePerKg = L.cost / kg;
           blog(b, `Freight and clearing cost of ${naira(L.cost)} added (${naira(b.ratePerKg)} per kg)`);
           os.forEach(o => { const c = calc(o), mine = c.items.filter(i => i.batchId === b.id && !i.shipIncluded); if (mine.length) logTo(o, `Shipping of ${naira(sum(mine.map(i => i.ship)))} added (${sum(mine.map(i => i.kg))} kg)`); });
         });
-        if (notify && os.length) reviewModal(os, msgBalance, 'Balance request sent on WhatsApp');
+        if (notify && tell.length) reviewModal(tell, msgBalance, 'Balance request sent on WhatsApp');
         else { closeModal(); toast('Freight cost saved'); }
       });
     },
   });
 }
 /* Review messages before sending (Calendly "Review bulk email") */
-function reviewModal(os, make, logText) {
+function reviewModal(os, make, logText, { done = 'Freight cost saved', remind = () => true } = {}) {
   const texts = os.map(make); let n = 0;
   openModal({
     title: 'Review messages',
@@ -1869,8 +2060,8 @@ function reviewModal(os, make, logText) {
       txt.addEventListener('input', () => { texts[n] = txt.value; });
       $('#rv-prev', el).addEventListener('click', () => { n = (n - 1 + os.length) % os.length; show(); });
       $('#rv-next', el).addEventListener('click', () => { n = (n + 1) % os.length; show(); });
-      $('#rv-skip', el).addEventListener('click', () => { closeModal(); toast('Freight cost saved'); });
-      $('#rv-go', el).addEventListener('click', () => { commit(() => os.forEach(o => { o.remindedOn = TODAY; logTo(o, logText); })); closeModal(); toast(`${plural(os.length, 'message')} sent`); });
+      $('#rv-skip', el).addEventListener('click', () => { closeModal(); toast(done); });
+      $('#rv-go', el).addEventListener('click', () => { commit(() => os.forEach(o => { if (remind(o)) o.remindedOn = TODAY; logTo(o, logText); })); closeModal(); toast(`${plural(os.length, 'message')} sent`); });
       show();
     },
   });
@@ -2321,7 +2512,7 @@ function shopImport(s, batchId) {
     if (!batchId) {
       const sh = S.shopify;
       S = { v: 3, seq: 1052, products: {}, customers: [], orders: [], batches: [], shopify: { ...sh, orders: [], log: [], testN: 0 } };
-      const b = { id: 'B' + Date.now(), name: `${MONTHS[Number(s.to.slice(5, 7)) - 1]} batch`, ref: nextRef(), from: 'Guangzhou', status: 'open', createdOn: s.from, closesOn: s.to > TODAY ? s.to : TODAY, shippedOn: null, eta: null, receivedOn: null, ratePerKg: null, cost: null, spareUnits: 0, spareKg: 0, shelf: 'A', lineup: [], log: [] };
+      const b = { id: 'B' + Date.now(), name: `${MONTHS[Number(s.to.slice(5, 7)) - 1]} batch`, ref: nextRef(), from: 'Guangzhou', status: 'open', createdOn: s.from, closesOn: s.to > TODAY ? s.to : TODAY, shippedOn: null, eta: null, receivedOn: null, ratePerKg: null, cost: null, spareUnits: 0, spareKg: 0, shelf: 'A', lineup: [], log: [], deliveries: [] };
       b.log.push({ date: TODAY, text: `Batch created for ${plural(es.length, 'order')} imported from Shopify`, kind: 'event' });
       S.batches.push(b); batchId = b.id;
     }
@@ -2542,15 +2733,16 @@ function toast(text, link) {
 const unitsLeft = b => sum(ordersIn(b).flatMap(o => o.items.filter(i => i.batchId === b.id && !i.handedOver).map(i => i.qty)));
 // Batches that still need Seye: taking orders, at sea, or landed with freight or hand-overs outstanding
 function sideBatches() {
-  const rank = { open: 0, transit: 1, received: 2 };
+  const rank = { open: 0, transit: 1, partial: 2, received: 3 };
   const when = b => toMs(b.status === 'open' ? b.closesOn : b.eta || b.closesOn);
-  return S.batches.filter(b => b.status === 'open' || b.status === 'transit' || (b.status === 'received' && (!b.cost || unitsLeft(b))))
+  return S.batches.filter(b => b.status === 'open' || onTheWay(b) || (b.status === 'received' && (!b.cost || unitsLeft(b))))
     .sort((a, b) => rank[a.status] - rank[b.status] || when(a) - when(b)).slice(0, 5);
 }
 function batchNote(b) {
   const inDays = n => n <= 0 ? 'today' : n === 1 ? 'tomorrow' : `in ${n} days`;
   if (b.status === 'open') return `Closes ${inDays(dayDiff(b.closesOn))}`;
   if (b.status === 'transit') return !b.eta ? 'In transit' : dayDiff(b.eta) < 0 ? `Expected ${fmt(b.eta)}` : `Expected ${inDays(dayDiff(b.eta))}`;
+  if (b.status === 'partial') return `${batchGot(b)} of ${batchTotal(b)} received`;
   if (!b.cost) return 'Freight cost needed';
   return `${plural(unitsLeft(b), 'unit')} to fulfill`;
 }
@@ -2608,7 +2800,8 @@ function render() {
   document.title = 'PreorderDesk';
 }
 window.addEventListener('hashchange', () => { if (modal) closeModal(); render(); window.scrollTo(0, 0); });
-window.addEventListener('storage', e => { if (e.key === KEY) { S = load(); ensureShopify(); render(); } });
+window.addEventListener('storage', e => { if (e.key === KEY) { S = load(); ensureDeliveries(); ensureShopify(); render(); } });
+ensureDeliveries();
 ensureShopify();
 render();
 </script>

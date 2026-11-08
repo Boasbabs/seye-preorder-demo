@@ -1,6 +1,6 @@
 # PreorderDesk UI validation against Mobbin
 
-Updated 4 November 2026 for v3, and on 6 November 2026 for the Shopify sales channel. `index.html` is v3. It has the same flows as v2 and a clean dashboard look modelled on Mercury and Stripe. It also adds three flows: adding products, creating a batch, and adding a customer to an order. v1 and v2 are kept locally in `archive/` and are not published. v1 was invented and rejected; v2 was a Shopify admin look-alike.
+Updated 4 November 2026 for v3, on 6 November 2026 for the Shopify sales channel, and on 8 November 2026 for batches that arrive in parts. `index.html` is v3. It has the same flows as v2 and a clean dashboard look modelled on Mercury and Stripe. It also adds three flows: adding products, creating a batch, and adding a customer to an order. v1 and v2 are kept locally in `archive/` and are not published. v1 was invented and rejected; v2 was a Shopify admin look-alike.
 
 The v3 look was checked with 10 more Mobbin searches. The v2 sections further down still back the flows, which v3 keeps.
 
@@ -94,6 +94,32 @@ The page is a simulation. Test orders use Seye's real products and prices, taken
 - Handing over a Shopify order logs that it was marked fulfilled in Shopify without Shopify emailing the customer.
 - Customers can have no WhatsApp number and no location ("Not added", "Location not given"), because staff-created Shopify orders sometimes have neither.
 
+## v3: batches that arrive in parts
+
+Added 8 November 2026, after Seye explained that a batch doesn't reach Lagos all at once: some items come earlier and some later. Checked with 7 more Mobbin searches. Receiving is now recorded one delivery at a time, each with its own date, and everything that depended on "the batch is received" now follows the items that actually arrived.
+
+| Screen or part | What it does | References |
+|---|---|---|
+| "Receive items" modal | One delivery: "Received on" date, then each product with a checkbox for the whole line and one row per customer's item. Items from earlier deliveries show a check, their date and shelf. "Total received: 11 of 13 units" with a bar, and "Select everything still to come". The button names the count: "Receive 3 units" | [Shopify Receive items](https://mobbin.com/screens/df6cdd24-2698-4c65-969c-48ca3ce84d6b) ("Total received: 0 of 3", a bar and "0 of 1" per line, "Accept all unreceived"), [Shopify Receive items, filled](https://mobbin.com/screens/b915690a-ee46-428e-ad13-35ef4e5e0614), [Shopify split fulfillment](https://mobbin.com/screens/3c4c94c7-f7c3-45e1-b71d-f4a435fa1876) (a checkbox per line, "10 items selected"), [Fresha Receive order](https://mobbin.com/screens/a105efa0-23b4-45ec-88ce-13f550f7d8a7) (Ordered and Received columns) |
+| Spare stock in that modal | A number field, "of 2" | [Shopify Scan to pick](https://mobbin.com/screens/1a4a7eea-9799-48c4-a4eb-9163a303a7ad) (number field, "of 1"), Fresha Receive order (linked above) |
+| "The rest expected" date | Shown only while something is still to come. It becomes the batch's expected date | [Shopify purchase order](https://mobbin.com/screens/780af3a7-0da7-4068-b1ef-c15eabc68cda) ("Estimated arrival" under Shipment details), Fresha Receive order ("Expected by") |
+| "Partially received" status | A blue pill, because the batch is still moving. Batches list "Received 10 of 13" with "2 deliveries so far"; the sidebar line reads "10 of 13 received" | [Fresha Stock orders](https://mobbin.com/screens/5bece7f0-e162-409f-807f-23e6bd864177) ("Partial" status), [Fresha Stock order partially received](https://mobbin.com/screens/6a574229-5489-4acb-a218-4c1767824222) ("You have received part of the stock order"), [Shopify Transfers](https://mobbin.com/screens/79d41cc7-0344-471a-be0b-016cffecb047) ("Received 0 of 14") |
+| Batch page progress | "Total received: 10 of 13 units" with a bar above the products table, and a bar with "1 of 2" in each product's Received column | [Shopify purchase order, ordered](https://mobbin.com/screens/780af3a7-0da7-4068-b1ef-c15eabc68cda) and [received](https://mobbin.com/screens/44aa57ce-d57f-495e-aaef-f62748691266) ("Total received: 3 of 3", a bar per product) |
+| Batch page "Deliveries" | "Still to come (3), expected 14 Nov" first, then one group per delivery, newest first: "Received (4), Delivery 2, 6 Nov 2026", listing each item with its customer and shelf, plus spare stock | [Shopify iOS order](https://mobbin.com/screens/991b6801-791b-4f43-b0e1-ce5e79fddb30) ("Fulfilled (2)" card with its own date and items), [Shopify order split into separate item groups](https://mobbin.com/screens/eafc89b4-30e4-4691-83ee-7da7150a2ac0), [H&M Package 1](https://mobbin.com/screens/937562b2-1901-483a-96f4-653b7d340aad) |
+| Customer's order page | Each item says "In Lagos since 6 Nov" or "Expected 17 Nov" when an order is split. Updates name what arrived on each date. An order still waiting in a partly received batch reads "Part of this shipment has already reached Lagos. Your order is coming in a later delivery" | [H&M Package 1](https://mobbin.com/screens/937562b2-1901-483a-96f4-653b7d340aad) (each package with its own estimated delivery); the headline and Updates list already in v3 (lululemon, Shop app, linked below) |
+| Messages after a delivery | The existing "Review messages" pager, sent to customers whose items arrived. Each message says what arrived and what's still to come, or gives the balance when everything is in | [Calendly Review bulk email](https://mobbin.com/screens/c4bd319b-6a11-40d1-b226-e58e5f7b8b1f), as for freight |
+
+**What changed elsewhere.**
+- An order's stage follows its own items, not its batch. An order whose items all arrived can get its final balance, a delivery method and be fulfilled while the rest of its batch is at sea. In the sample data, Ada's glass bowls came in delivery 1 of the June batch, and Funmi's cookware in delivery 2. Amaka's cookware is still to come.
+- The freight cost can be added once the first delivery is in. It is still split across the whole batch by weight. The balance messages go only to customers whose items have arrived; the others hear when theirs arrive.
+- Home and Batches count units still to come as "In transit", including spare stock. "Spare stock" counts only spare units that have arrived.
+- To do: "Add freight cost for the June batch: 10 of 13 units arrived", and "Receive the rest of the June batch" a day before the rest is due.
+- Order page: an item that has arrived reads "Arrived 6 Nov. Shelf B4"; one still to come reads "June batch, in a later delivery, expected 14 Nov".
+- On phones, the batch products table drops Price and Weight so the Received bars stay on screen.
+- Saved data from before this change is upgraded in place: a received batch becomes one delivery that brought everything. Reset shows the new June batch.
+
+**Not covered:** an order line with a quantity above 1 is received whole. Receiving 1 of a customer's 2 units would need the line split in two, as Shopify splits a line when it fulfils part of it. None of the sample batches at sea has such a line.
+
 ## v3: still not backed by a direct reference
 
 1. The duplicate-number warning with "Use Amaka". It's a common pattern, but I didn't find it on Mobbin.
@@ -101,6 +127,8 @@ The page is a simulation. Test orders use Seye's real products and prices, taken
 3. Apple's system font and its blue (#0071E3). This is a look chosen for the Steve Jobs brief. Mercury's primary blue plays the same role.
 4. In "Add weights", typing a weight copies it to the other variants of the same product. It saves typing for colour variants; I didn't find this exact behaviour.
 5. Product fields that come from Shopify shown as disabled inputs with "Change it in Shopify". The idea of fields owned by another system is common; I didn't search for a screen of it.
+6. In "Receive items", the customer rows nested under each product. Shopify receives per product and fulfils per order; the receive modal puts the two together because a preorder item belongs to a customer from the start. Each half has its reference above.
+7. Hiding the Price and Weight columns of the batch products table on phones. It's a common responsive choice; I didn't search for a screen of it.
 
 ---
 
