@@ -120,6 +120,30 @@ Added 8 November 2026, after Seye explained that a batch doesn't reach Lagos all
 
 **Not covered:** an order line with a quantity above 1 is received whole. Receiving 1 of a customer's 2 units would need the line split in two, as Shopify splits a line when it fulfils part of it. None of the sample batches at sea has such a line.
 
+## v3: inventory and dispatch
+
+Added 11 November 2026, after Seye asked to see what is in the warehouse as each delivery is received, and what is left as her team dispatches orders. Checked with 7 Mobbin searches. Stock is never typed in: it is counted from deliveries, dispatches and adjustments.
+
+| Screen or part | What it does | References |
+|---|---|---|
+| Inventory page | One row per product: For customers, Spare, On hand, On the way, Dispatched. An overview panel with the on-hand total. Tabs: In the warehouse, On the way, All products | [Shopify product inventory](https://mobbin.com/screens/f2e1801b-4845-4602-ba5f-ec641213e8a1) (Unavailable, Committed, Available, On hand per location; ours are the same ideas in plainer words), [Square item library](https://mobbin.com/screens/78f2c018-e2c9-440c-8b5c-e631b2539163) ("20 available", "Sold out" per item) |
+| A product's stock page | On hand, then each unit on the shelf with its shelf number and the customer it's held for, spare stock, what's on the way by batch, and a history with the count after each change | [Shopify product inventory](https://mobbin.com/screens/f2e1801b-4845-4602-ba5f-ec641213e8a1) (the per-product card), [Fresha register activity](https://mobbin.com/screens/7d400db8-b7e8-4df3-b2e3-b6cfdb2d8205) (a dated list of ins and outs with the amount on the right) |
+| "Adjust spare stock" modal | Type the number on the shelf now, see "13 → 12 (−1)", pick a reason, add a note | [Shopify inventory adjustment](https://mobbin.com/screens/9628dd30-7311-4334-b9d2-6b93bd89eecc) ("Set to", the old and new count, and reasons: Correction, Count, Received, Return restock, Damaged, Theft or loss, Promotion or donation), [Square adjustment reasons](https://mobbin.com/screens/5b1c7f2b-a3e9-4a23-a76a-75bfb26057f4) (Damage, Loss, Theft, Restock return) |
+| Dispatch page | Tabs: To dispatch, On hold in the warehouse, Dispatched. To dispatch lists what to pack with shelf numbers and a Dispatch button per order | [Square Shipments](https://mobbin.com/screens/5a7aad19-5af4-498b-9e50-39308fe8ae28) (To-do and Shipped tabs) |
+| "Dispatch order" modal | "2 items selected", a checkbox and "1 of 1" per line, tracking number, courier, "Send a notification to the customer". The footer says what the warehouse will hold afterwards | [Shopify Mark as fulfilled](https://mobbin.com/screens/922543bc-0a8b-4529-a06d-72ec5a201f3a) ("20 items selected", a checkbox and "10 of 10" per line, tracking number, shipping carrier, notification) |
+| Recent activity | Deliveries in, dispatches out and adjustments, newest first, with +4 or −1 on the right | [Fresha register activity](https://mobbin.com/screens/7d400db8-b7e8-4df3-b2e3-b6cfdb2d8205) |
+
+**What changed elsewhere.**
+- The staff word is now "dispatch", Seye's word: Ready to dispatch, Partially dispatched, Dispatched. Shopify's own "Fulfilled" stays where the text is about Shopify.
+- Each dispatch gets a number (D1002) and is kept, with its courier and tracking number. The order page shows it beside the dispatched items.
+- "Receive items" asks for spare units per product, under each product's customer rows, so inventory knows which product each spare unit is. The batch page lists spare units by product in each delivery, with a link to inventory.
+- After receiving or dispatching, the toast gives the new warehouse total with "View inventory".
+- Sidebar: Inventory and Dispatch sit after Batches, and the ready count moved from Orders to Dispatch. On phones the five tabs are Home, Orders, Batches, Inventory and Dispatch; Products, Customers and Shopify are under "More" on Home.
+- Home shows "In the warehouse" in place of "On hold". Products has an "On hand" column.
+- Saved data from before this change is upgraded in place: spare units are shared across the batch's products, and items already handed over get a dispatch record. Reset shows the clean sample.
+
+**Not covered:** selling spare stock as an order (it can only be adjusted out, for example "Sold in person"), writing off a unit held for a customer, returns, and a packing step. The tech proposal lists them as gaps.
+
 ## v3: still not backed by a direct reference
 
 1. The duplicate-number warning with "Use Amaka". It's a common pattern, but I didn't find it on Mobbin.
@@ -129,6 +153,10 @@ Added 8 November 2026, after Seye explained that a batch doesn't reach Lagos all
 5. Product fields that come from Shopify shown as disabled inputs with "Change it in Shopify". The idea of fields owned by another system is common; I didn't search for a screen of it.
 6. In "Receive items", the customer rows nested under each product. Shopify receives per product and fulfils per order; the receive modal puts the two together because a preorder item belongs to a customer from the start. Each half has its reference above.
 7. Hiding the Price and Weight columns of the batch products table on phones. It's a common responsive choice; I didn't search for a screen of it.
+8. The Inventory list as its own page. Mobbin's Shopify screens show the inventory columns on a product page; I didn't find a capture of Shopify's Inventory list, which has the same columns per product.
+9. "On hold in the warehouse" as a third Dispatch tab. Square has To-do and Shipped only. The tab reuses the order page's On hold reasons.
+10. "Leaves 26 units in the warehouse" in the dispatch modal's footer, and the warehouse total in toasts. It answers Seye's question directly; I didn't find a reference for it.
+11. Products and Customers under "More" on the phone Home page, because the tab bar holds five. A "More" tab is the usual answer; this reuses the existing phone-only list.
 
 ---
 

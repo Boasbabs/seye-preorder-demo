@@ -247,6 +247,14 @@ img.thumb{display:block}
 .dline{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px 0}
 .dline .thumb{width:36px;height:36px}
 .dline .num{color:var(--ink-2)}
+/* Inventory and dispatch (Shopify inventory: Committed, Available, On hand, Incoming; Square Shipments; Fresha activity list) */
+.chg{font-weight:500;font-variant-numeric:tabular-nums}
+.chg.in{color:var(--green)}
+.tbl td.wrap{white-space:normal;min-width:180px}
+.tbl .zero{color:var(--ink-3)}
+.adj-now{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-2);margin:-4px 0 12px}
+.adj-now strong{color:var(--ink);font-variant-numeric:tabular-nums}
+.rcv-i.sp{cursor:default}
 /* Receive items (Shopify "Receive items", Shopify split fulfillment checkboxes, Fresha "Receive order") */
 .rcv-g{border-top:1px solid var(--line-2);padding:10px 0}
 .rcv-g:first-of-type{border-top:0}
@@ -650,6 +658,7 @@ const I = {
   upload: '<path d="M10 13V4M6.5 7.5 10 4l3.5 3.5"/><path d="M4 12.5v2.5A1.5 1.5 0 0 0 5.5 16.5h9a1.5 1.5 0 0 0 1.5-1.5v-2.5"/>',
   more: '<circle cx="5" cy="10" r="1.1"/><circle cx="10" cy="10" r="1.1"/><circle cx="15" cy="10" r="1.1"/>',
   link: '<path d="M8.5 11.5a3 3 0 0 0 4.2 0l2.3-2.3a3 3 0 0 0-4.2-4.2L9.6 6.2"/><path d="M11.5 8.5a3 3 0 0 0-4.2 0L5 10.8a3 3 0 0 0 4.2 4.2l1.2-1.2"/>',
+  shelves: '<path d="M3 17V7.5l7-4 7 4V17"/><path d="M6.5 17v-6.5h7V17M6.5 13.7h7"/>',
   ship: '<path d="M2.5 12.5h15l-1.8 3.2a1 1 0 0 1-.9.5H5.2a1 1 0 0 1-.9-.5z"/><path d="M5.5 12.5V8.5h4v4M9.5 12.5V8.5h4v4M9.5 8.5v-4h4v4"/>',
 };
 const ic = n => `<svg class="ic" viewBox="0 0 20 20" aria-hidden="true">${I[n] || ''}</svg>`;
@@ -694,13 +703,13 @@ function seed() {
   const s = {
     v: 3, seq: 1052, products, customers: [], orders: [],
     batches: [
-      { id: 'MAY', name: 'May batch', ref: 'SHP-2605', from: 'Ningbo', status: 'received', createdOn: rel(-112), closesOn: rel(-95), shippedOn: rel(-88), eta: rel(-21), receivedOn: rel(-21), ratePerKg: 2800, cost: null, spareKg: 30, spareUnits: 16, shelf: 'A', lineup: ['KB04'], log: [],
-        deliveries: [{ id: 'd1', date: rel(-21), spare: 16 }] },
+      { id: 'MAY', name: 'May batch', ref: 'SHP-2605', from: 'Ningbo', status: 'received', createdOn: rel(-112), closesOn: rel(-95), shippedOn: rel(-88), eta: rel(-21), receivedOn: rel(-21), ratePerKg: 2800, cost: null, spareKg: 48, spareUnits: 16, spareBy: { KB04: 16 }, shelf: 'A', lineup: ['KB04'], log: [],
+        deliveries: [{ id: 'd1', date: rel(-21), spare: 16, spareBy: { KB04: 16 } }] },
       /* Arriving in parts: the glass bowls came first, the dispenser and one cookware set a week later, and one cookware set is still to come */
-      { id: 'JUN', name: 'June batch', ref: 'SHP-2606', from: 'Guangzhou', status: 'partial', createdOn: rel(-100), closesOn: rel(-82), shippedOn: rel(-80), eta: rel(6), receivedOn: null, ratePerKg: null, cost: null, spareKg: 89, spareUnits: 8, shelf: 'B', lineup: ['CI07', 'GB12', 'HD02'], log: [],
-        deliveries: [{ id: 'd1', date: rel(-9), spare: 4 }, { id: 'd2', date: rel(-2), spare: 2 }] },
-      { id: 'AUG', name: 'August batch', ref: 'SHP-2607', from: 'Guangzhou', status: 'transit', createdOn: rel(-60), closesOn: rel(-42), shippedOn: rel(-41), eta: rel(9), receivedOn: null, ratePerKg: null, cost: null, spareKg: 40, spareUnits: 12, shelf: 'C', lineup: ['SP01', 'FA21', 'FA08'], log: [], deliveries: [] },
-      { id: 'NOV', name: 'November batch', ref: 'SHP-2608', from: 'Guangzhou', status: 'open', createdOn: rel(-12), closesOn: rel(6), shippedOn: null, eta: null, receivedOn: null, ratePerKg: null, cost: null, spareKg: 0, spareUnits: 0, shelf: 'D', lineup: ['CI07', 'HD02', 'GB12'], log: [], deliveries: [] },
+      { id: 'JUN', name: 'June batch', ref: 'SHP-2606', from: 'Guangzhou', status: 'partial', createdOn: rel(-100), closesOn: rel(-82), shippedOn: rel(-80), eta: rel(6), receivedOn: null, ratePerKg: null, cost: null, spareKg: 95, spareUnits: 8, spareBy: { CI07: 4, HD02: 3, GB12: 1 }, shelf: 'B', lineup: ['CI07', 'GB12', 'HD02'], log: [],
+        deliveries: [{ id: 'd1', date: rel(-9), spare: 4, spareBy: { GB12: 1, CI07: 3 } }, { id: 'd2', date: rel(-2), spare: 2, spareBy: { HD02: 2 } }] },
+      { id: 'AUG', name: 'August batch', ref: 'SHP-2607', from: 'Guangzhou', status: 'transit', createdOn: rel(-60), closesOn: rel(-42), shippedOn: rel(-41), eta: rel(9), receivedOn: null, ratePerKg: null, cost: null, spareKg: 40, spareUnits: 12, spareBy: { SP01: 7, FA21: 3, FA08: 2 }, shelf: 'C', lineup: ['SP01', 'FA21', 'FA08'], log: [], deliveries: [] },
+      { id: 'NOV', name: 'November batch', ref: 'SHP-2608', from: 'Guangzhou', status: 'open', createdOn: rel(-12), closesOn: rel(6), shippedOn: null, eta: null, receivedOn: null, ratePerKg: null, cost: null, spareKg: 0, spareUnits: 0, spareBy: {}, shelf: 'D', lineup: ['CI07', 'HD02', 'GB12'], log: [], deliveries: [] },
     ],
   };
   const shelfNo = { A: 0, B: 0, C: 0, D: 0 };
@@ -733,7 +742,7 @@ function seed() {
     if (x.delivery) L(o.created, x.delivery[0] === 'pickup' ? `Delivery method set to pickup at ${STORE.hub}` : `Delivery method set to delivery to ${area}`);
     if (x.reminded != null) L(o.remindedOn, 'Payment reminder sent on WhatsApp');
     if (x.claim) L(TODAY, `Customer sent proof of a ${naira(x.claim[0])} transfer (${x.claim[2]})`);
-    if (x.delivered != null) L(o.deliveredOn, 'Fulfilled by courier (GIG Logistics)');
+    if (x.delivered != null) L(o.deliveredOn, `${andList(o.items.map(it => products[it.sku].name))} dispatched by courier (GIG Logistics)`);
     s.orders.push(o);
   };
   mk(1037, 'Yewande Bakare', 'Ikoyi', 'WhatsApp', -101, [['KB04', 'MAY', { done: 1 }]], [[68000, -100, 'Bank transfer'], [13900, -8, 'Paystack']], { delivery: ['courier', 5500], delivered: -5 });
@@ -768,7 +777,45 @@ function seed() {
     });
     if (b.cost) L(b.receivedOn, `Freight and clearing cost of ${naira(b.cost)} added (${naira(b.ratePerKg)} per kg)`);
   });
+  /* Spare saucepans that left the warehouse without an order */
+  s.moves = [
+    { id: 'm1', date: rel(-12), sku: 'KB04', qty: -1, reason: 'Damaged', note: 'Chipped enamel, found while shelving' },
+    { id: 'm2', date: rel(-6), sku: 'KB04', qty: -2, reason: 'Sold in person', note: 'Walk-in at the hub' },
+  ];
+  backfillStock(s);
   return s;
+}
+/* Stock records for data that has none yet: which product each spare unit is, and a dispatch for every item already handed over.
+   Returns true when it changed something. */
+function backfillStock(s) {
+  let ch = false;
+  if (!s.moves) { s.moves = []; ch = true; }
+  if (!s.dispatches) { s.dispatches = []; s.dseq = 1000; ch = true; }
+  s.batches.forEach(b => {
+    if (!b.spareBy) {
+      ch = true; b.spareBy = {};
+      const ks = b.lineup || [];
+      for (let n = 0; ks.length && n < (b.spareUnits || 0); n++) { const k = ks[n % ks.length]; b.spareBy[k] = (b.spareBy[k] || 0) + 1; }
+    }
+    const left = { ...b.spareBy };
+    (b.deliveries || []).forEach(d => {
+      if (!d.spareBy) {
+        ch = true; d.spareBy = {};
+        let need = d.spare || 0;
+        Object.keys(left).forEach(k => { const t = Math.min(left[k], need); if (t) { d.spareBy[k] = t; need -= t; } });
+      }
+      Object.entries(d.spareBy).forEach(([k, n]) => { left[k] = (left[k] || 0) - n; });
+    });
+  });
+  [...s.orders].sort((a, b) => String(a.deliveredOn || '9').localeCompare(String(b.deliveredOn || '9')) || a.id - b.id).forEach(o => {
+    const its = o.items.filter(i => i.handedOver && !i.dispatchId);
+    if (!its.length) return;
+    ch = true;
+    const id = 'D' + (++s.dseq), method = o.delivery ? o.delivery.method : 'pickup';
+    its.forEach(i => { i.dispatchId = id; });
+    s.dispatches.push({ id, date: o.deliveredOn || TODAY, orderId: o.id, method, carrier: method === 'courier' ? 'GIG Logistics' : '', track: '', lines: its.map(i => ({ sku: i.sku, qty: i.qty, shelf: i.shelf || null, batchId: i.batchId })) });
+  });
+  return ch;
 }
 /* Batch timeline line for one delivery. lines: [{ name, qty }] */
 function deliveryText(n, lines, spare, left, eta) {
@@ -794,6 +841,7 @@ function ensureDeliveries() {
   });
   if (changed) save();
 }
+function ensureStock() { if (backfillStock(S)) save(); }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('This browser couldn’t save the change. Try a smaller photo.'); } }
 let S = load();
 
@@ -818,6 +866,37 @@ const batchGot = b => sum(batchLines(b).filter(x => isIn(x.i)).map(x => x.i.qty)
 const batchLeft = b => batchTotal(b) - batchGot(b);
 const onTheWay = b => b.status === 'transit' || b.status === 'partial';
 const lastDelivery = b => (b.deliveries || []).slice(-1)[0] || null;
+/* Stock in the Lagos warehouse, worked out from deliveries, dispatches and adjustments. Never typed in, so it can't drift.
+   held: received for a customer and not dispatched. spare: received, not tied to an order. way: shipped, not yet received. */
+const spareGot = (b, k) => sum((b.deliveries || []).map(d => (d.spareBy || {})[k] || 0));
+function stockOf(sku) {
+  let held = 0, way = 0, out = 0;
+  S.orders.forEach(o => o.items.forEach(i => {
+    if (i.sku !== sku) return;
+    if (i.handedOver) out += i.qty; else if (i.receivedOn) held += i.qty; else if (onTheWay(batchById(i.batchId))) way += i.qty;
+  }));
+  let spare = sum(S.moves.filter(m => m.sku === sku).map(m => m.qty));
+  S.batches.forEach(b => { const g = spareGot(b, sku); spare += g; if (onTheWay(b)) way += ((b.spareBy || {})[sku] || 0) - g; });
+  return { held, spare, onHand: held + spare, way, out };
+}
+const stockAll = () => Object.values(S.products).map(p => ({ p, s: stockOf(p.id) }));
+const warehouseUnits = () => sum(stockAll().map(r => r.s.onHand));
+/* Every time a product's stock changed, oldest first, with the on-hand count after each */
+function stockHistory(sku) {
+  const ev = [];
+  S.batches.forEach(b => (b.deliveries || []).forEach((d, n) => {
+    const cust = sum(batchLines(b).filter(x => x.i.sku === sku && x.i.dId === d.id).map(x => x.i.qty)), sp = (d.spareBy || {})[sku] || 0;
+    if (cust + sp) ev.push({ date: d.date, k: 0, qty: cust + sp, text: `Received with the ${b.name}`, sub: `Delivery ${n + 1}. ${[cust ? `${cust} for customers` : '', sp ? `${sp} spare` : ''].filter(Boolean).join(', ')}`, href: `#batch/${b.id}` });
+  }));
+  S.moves.filter(m => m.sku === sku).forEach(m => ev.push({ date: m.date, k: 1, qty: m.qty, text: `Spare stock adjusted: ${lc(m.reason)}`, sub: m.note || '' }));
+  S.dispatches.forEach(d => { const q = sum(d.lines.filter(l => l.sku === sku).map(l => l.qty)); const o = orderById(d.orderId);
+    if (q) ev.push({ date: d.date, k: 2, qty: -q, text: `Dispatched to ${o ? custOf(o).name : 'a customer'}`, sub: `Order #${d.orderId}, ${dispatchHow(d)}`, href: `#order/${d.orderId}` }); });
+  ev.sort((a, b) => toMs(a.date) - toMs(b.date) || a.k - b.k);
+  let bal = 0; ev.forEach(e => { bal += e.qty; e.after = bal; });
+  return ev;
+}
+const dispatchHow = d => d.method === 'pickup' ? `picked up at ${STORE.hub}` : `by ${d.carrier || 'courier'}${d.track ? `, tracking ${d.track}` : ''}`;
+const signed = n => (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n);
 const rbar = (got, total, now = 0) => `<div class="rbar" role="img" aria-label="${got} of ${total} received"><i style="width:${total ? Math.round((got + now) / total * 100) : 0}%" class="now"></i><i style="width:${total ? Math.round(got / total * 100) : 0}%"></i></div>`;
 const lc = s => s.charAt(0).toLowerCase() + s.slice(1);
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -877,9 +956,9 @@ function calc(o) {
   else if (owed > 0 || !final) pay = ['Partially paid', ''];
   else pay = ['Paid', 'green', 'check'];
   let ful;
-  if (delivered) ful = ['Fulfilled', 'green', 'check'];
-  else if (items.some(i => i.handedOver)) ful = ['Partially fulfilled', 'amber'];
-  else if (fulfillable.length) ful = ['Ready to fulfill', 'amber'];
+  if (delivered) ful = ['Dispatched', 'green', 'check'];
+  else if (items.some(i => i.handedOver)) ful = ['Partially dispatched', 'amber'];
+  else if (fulfillable.length) ful = ['Ready to dispatch', 'amber'];
   else ful = ['On hold', ''];
   return { items, goods, discount, ship, shipKnown, delivery, total, paid, owed, final, claim, remaining, missing, reasons, ready, fulfillable, held, delivered, pay, ful };
 }
@@ -899,7 +978,7 @@ function todos() {
   const noKg = kgNeeded();
   if (noKg.length) T.push({ icon: 'box', tone: 'amber', href: '#shopify', title: `Add weights for ${plural(noKg.length, 'product')} from Shopify`, sub: 'Needed before a batch’s freight cost can be split by weight.' });
   const ready = all.filter(x => x.c.ready);
-  if (ready.length) T.push({ icon: 'box', tone: 'green', href: '#orders?tab=ready', title: `${plural(ready.length, 'order')} ready to fulfill`, sub: andList(ready.map(x => esc(x.cu.name))) });
+  if (ready.length) T.push({ icon: 'box', tone: 'green', href: '#dispatch', title: `${plural(ready.length, 'order')} ready to dispatch`, sub: andList(ready.map(x => esc(x.cu.name))) });
   S.batches.filter(b => (b.status === 'received' || b.status === 'partial') && b.ratePerKg == null).forEach(b => {
     const waiting = ordersIn(b).filter(o => o.items.some(i => i.batchId === b.id && i.receivedOn && !i.handedOver)).length;
     T.push({ icon: 'money', tone: 'amber', href: `#batch/${b.id}`, title: `Add freight cost for the ${b.name}`, sub: b.status === 'partial'
@@ -926,7 +1005,6 @@ function homePage() {
   const dueOrders = all.filter(x => !x.c.delivered && x.c.owed > 0);
   const due = sum(dueOrders.map(x => x.c.owed));
   const ready = all.filter(x => x.c.ready).length;
-  const hold = all.filter(x => !x.c.delivered && !x.c.fulfillable.length).length;
   const transit = S.batches.filter(onTheWay);
   const inflow = sum(S.orders.flatMap(o => o.payments.filter(p => dayDiff(p.date) >= -30).map(p => p.amount)));
   const T = todos();
@@ -942,8 +1020,8 @@ function homePage() {
     <section class="panel overview">
       <div><span class="label">Balance due</span><div class="big">${naira(due)}</div><span class="muted">Across ${plural(dueOrders.length, 'order')}</span></div>
       <div class="ov-stats">
-        <a href="#orders?tab=ready"><span class="label">Ready to fulfill</span><strong>${ready}</strong></a>
-        <a href="#orders?tab=hold"><span class="label">On hold</span><strong>${hold}</strong></a>
+        <a href="#dispatch"><span class="label">Ready to dispatch</span><strong>${ready}</strong></a>
+        <a href="#inventory" title="Units in the Lagos warehouse: held for customers, plus spare stock"><span class="label">In the warehouse</span><strong>${plural(warehouseUnits(), 'unit')}</strong></a>
         <a href="#batches" title="Units shipped and not yet in Lagos, including spare stock"><span class="label">In transit</span><strong>${plural(sum(transit.map(batchLeft)), 'unit')}</strong></a>
         <a href="#orders" title="Payments received in the last 30 days"><span class="label">Money in</span><strong class="green">${naira(inflow)}</strong></a>
       </div>
@@ -954,13 +1032,15 @@ function homePage() {
         : `<div class="empty">${ic('done')}<strong>Nice! There’s nothing you need to do right now.</strong>New tasks appear here when a batch arrives or a customer pays.</div>`}
     </section>
     <section class="sec phone-only">
-      <div class="sec-h"><h2>Sales channels</h2></div>
-      <ul class="todo"><li><a href="#shopify"><span class="ti">${ic('store')}</span><span><strong>Shopify</strong><small>${shopNote()}</small></span><span class="chev">${ic('chevR')}</span></a></li></ul>
+      <div class="sec-h"><h2>More</h2></div>
+      <ul class="todo"><li><a href="#products"><span class="ti">${ic('box')}</span><span><strong>Products</strong><small>${plural(Object.keys(S.products).length, 'product')}</small></span><span class="chev">${ic('chevR')}</span></a></li>
+        <li><a href="#customers"><span class="ti">${ic('customers')}</span><span><strong>Customers</strong><small>${plural(S.customers.length, 'customer')}</small></span><span class="chev">${ic('chevR')}</span></a></li>
+        <li><a href="#shopify"><span class="ti">${ic('store')}</span><span><strong>Shopify</strong><small>${shopNote()}</small></span><span class="chev">${ic('chevR')}</span></a></li></ul>
     </section>
   </div>`;
 }
 
-const TABS = [['all', 'All'], ['unpaid', 'Unpaid'], ['ready', 'Ready to fulfill'], ['hold', 'On hold'], ['fulfilled', 'Fulfilled']];
+const TABS = [['all', 'All'], ['unpaid', 'Unpaid'], ['ready', 'Ready to dispatch'], ['hold', 'On hold'], ['fulfilled', 'Dispatched']];
 const TAB_TEST = {
   all: () => true,
   unpaid: c => !c.delivered && (c.owed > 0 || !!c.claim),
@@ -990,7 +1070,7 @@ function ordersPage(tab) {
   </div>`;
 }
 function orderTable(rows) {
-  return `<div class="tbl-wrap listify"><table class="tbl"><thead><tr><th>Order</th><th>Customer</th><th>Batch</th><th>Payment</th><th>Fulfillment</th><th class="r">Total</th></tr></thead><tbody>
+  return `<div class="tbl-wrap listify"><table class="tbl"><thead><tr><th>Order</th><th>Customer</th><th>Batch</th><th>Payment</th><th>Dispatch</th><th class="r">Total</th></tr></thead><tbody>
     ${rows.map(({ o, c, cu }) => `<tr data-href="#order/${o.id}"><td><a class="strong" href="#order/${o.id}" style="color:inherit">#${o.id}</a><small>${fmt(o.created)}${o.shopify ? ', Shopify' : ''}</small></td><td><span class="who">${av(cu.name)}<span>${esc(cu.name)}</span></span></td><td class="muted">${esc(batchNames(o))}</td><td>${payPill(c)}</td><td>${fulPill(c)}</td><td class="r">${naira(c.total)}</td></tr>`).join('')}
   </tbody></table></div>
   <ul class="rowlist">${rows.map(({ o, c, cu }) => `<li><a href="#order/${o.id}">${av(cu.name, 'md')}<span><strong>${esc(cu.name)}</strong><small>#${o.id}, ${fmt(o.created)}</small></span><span class="r"><span class="num">${naira(c.total)}</span>${c.claim ? payPill(c) : c.fulfillable.length || c.delivered ? fulPill(c) : payPill(c)}</span></a></li>`).join('')}</ul>`;
@@ -1061,10 +1141,10 @@ function orderPage(id) {
       <div class="d-main">
         <section class="sec">
           <div class="sec-h"><h2>Items <span class="n">${itemCount(o)}</span></h2></div>
-          ${c.fulfillable.length ? `<div class="group"><div class="group-h">${pill('Ready to fulfill', 'amber')}<span class="muted">${methodText(o, cu)}</span><span class="acts"><button class="btn ${primary === 'fulfill' ? 'primary' : ''} sm" data-act="fulfill" data-id="${o.id}">${pickup ? 'Mark as picked up' : 'Mark as fulfilled'}</button></span></div>${c.fulfillable.map(lineRow).join('')}</div>` : ''}
+          ${c.fulfillable.length ? `<div class="group"><div class="group-h">${pill('Ready to dispatch', 'amber')}<span class="muted">${methodText(o, cu)}</span><span class="acts"><button class="btn ${primary === 'fulfill' ? 'primary' : ''} sm" data-act="fulfill" data-id="${o.id}">${pickup ? 'Mark as picked up' : 'Dispatch'}</button></span></div>${c.fulfillable.map(lineRow).join('')}</div>` : ''}
           ${c.held.length ? `<div class="group"><div class="group-h">${pill('On hold')}${canRelease ? `<span class="acts"><button class="btn sm" data-act="release" data-id="${o.id}">Release hold</button></span>` : ''}</div>
             <ul class="reasons">${c.reasons.map(r => `<li><span>${esc(r.text)}</span>${reasonAction(r, o)}</li>`).join('')}</ul>${c.held.map(lineRow).join('')}</div>` : ''}
-          ${fulfilledItems.length ? `<div class="group"><div class="group-h">${pill('Fulfilled', 'green', 'check')}<span class="muted">${o.deliveredOn ? fmtY(o.deliveredOn) + '. ' : ''}${methodText(o, cu)}</span></div>${fulfilledItems.map(lineRow).join('')}</div>` : ''}
+          ${fulfilledItems.length ? `<div class="group"><div class="group-h">${pill('Dispatched', 'green', 'check')}<span class="muted">${o.deliveredOn ? fmtY(o.deliveredOn) + '. ' : ''}${methodText(o, cu)}${fulfilledItems.some(i => i.dispatchId) ? `. ${[...new Set(fulfilledItems.map(i => i.dispatchId).filter(Boolean))].join(', ')}` : ''}</span></div>${fulfilledItems.map(lineRow).join('')}</div>` : ''}
         </section>
         <section class="sec">
           <div class="sec-h"><h2>Payment</h2>${!c.delivered && (c.owed > 0 || !c.final) ? `<div class="acts"><button class="btn ${primary === 'pay' ? 'primary' : ''} sm" data-act="mark-paid" data-id="${o.id}">Mark as paid</button></div>` : ''}</div>
@@ -1124,8 +1204,8 @@ function batchesPage() {
       <div><span class="label">Taking orders</span><div class="big">${plural(sum(openBatches().map(batchUnits)), 'unit')}</div><span class="muted">${plural(openBatches().length, 'batch', 'batches')} open</span></div>
       <div class="ov-stats three">
         <div title="Units shipped and not yet in Lagos, including spare stock"><span class="label">In transit</span><strong>${plural(sum(S.batches.filter(onTheWay).map(batchLeft)), 'unit')}</strong></div>
-        <div><span class="label">Received, not fulfilled</span><strong>${plural(sum(S.orders.flatMap(o => calc(o).items.filter(i => i.here && !i.handedOver).map(i => i.qty))), 'unit')}</strong></div>
-        <div title="Spare units that have arrived in Lagos"><span class="label">Spare stock</span><strong>${plural(sum(S.batches.map(spareIn)), 'unit')}</strong></div>
+        <a href="#inventory" title="In the warehouse for customers, not yet dispatched"><span class="label">Received, not dispatched</span><strong>${plural(sum(stockAll().map(r => r.s.held)), 'unit')}</strong></a>
+        <a href="#inventory" title="Spare units in the warehouse now"><span class="label">Spare stock</span><strong>${plural(sum(stockAll().map(r => r.s.spare)), 'unit')}</strong></a>
       </div>
     </section>
     <div class="tbl-wrap listify"><table class="tbl"><thead><tr><th>Batch</th><th>Route</th><th>Status</th><th class="r">Orders</th><th class="r">Received</th><th>Expected</th><th class="r">Freight cost</th></tr></thead><tbody>
@@ -1154,16 +1234,17 @@ function batchPage(id) {
   if (b.status === 'open') primary = `<button class="btn primary" data-act="transit" data-id="${b.id}">Mark as in transit</button>`;
   else if (b.status === 'transit') primary = recv('primary');
   else if (b.ratePerKg == null && (b.status === 'partial' || b.status === 'received')) primary = `${b.status === 'partial' ? recv('') : ''}<button class="btn primary" data-act="freight" data-id="${b.id}">Add freight cost</button>`;
-  else if (b.status === 'partial') primary = readyN ? `${recv('')}<a class="btn primary" href="#orders?tab=ready">Fulfill orders</a>` : recv('primary');
-  else if (b.status === 'received' && readyN) primary = `<a class="btn primary" href="#orders?tab=ready">Fulfill orders</a>`;
+  else if (b.status === 'partial') primary = readyN ? `${recv('')}<a class="btn primary" href="#dispatch">Dispatch orders</a>` : recv('primary');
+  else if (b.status === 'received' && readyN) primary = `<a class="btn primary" href="#dispatch">Dispatch orders</a>`;
   const rcell = (g, q) => `<span class="rcell">${rbar(g, q)}<span>${g} of ${q}</span></span>`;
-  const dRow = ({ o, i }) => `<div class="dline">${thumb(P(i.sku))}<div><div class="ln">${esc(P(i.sku).name)}</div><div class="ls">For <a href="#order/${o.id}">${esc(custOf(o).name)}</a>, #${o.id}${i.shelf ? `. Shelf ${i.shelf}` : ''}${i.handedOver ? '. Fulfilled' : ''}</div></div><div class="num">× ${i.qty}</div></div>`;
-  const spareRow = n => n ? `<div class="dline">${thumb({ icon: 'box' })}<div><div class="ln">Spare stock</div><div class="ls">To sell later</div></div><div class="num">× ${n}</div></div>` : '';
+  const dRow = ({ o, i }) => `<div class="dline">${thumb(P(i.sku))}<div><div class="ln">${esc(P(i.sku).name)}</div><div class="ls">For <a href="#order/${o.id}">${esc(custOf(o).name)}</a>, #${o.id}${i.shelf ? `. Shelf ${i.shelf}` : ''}${i.handedOver ? '. Dispatched' : ''}</div></div><div class="num">× ${i.qty}</div></div>`;
+  const spareRows = by => Object.entries(by || {}).filter(([, n]) => n > 0).map(([k, n]) => `<div class="dline">${thumb(P(k))}<div><div class="ln">${esc(P(k).name)}</div><div class="ls">Spare stock, <a href="${stockHref(k)}">in inventory</a></div></div><div class="num">× ${n}</div></div>`).join('');
+  const spareToCome = Object.fromEntries(Object.keys(b.spareBy || {}).map(k => [k, b.spareBy[k] - spareGot(b, k)]));
   const still = lines.filter(x => !isIn(x.i));
   const deliveriesHTML = !dl.length ? '' : `<section class="sec">
           <div class="sec-h"><h2>Deliveries <span class="n">${dl.length}</span></h2></div>
-          ${left ? `<div class="group"><div class="group-h">${pill(`Still to come (${left})`)}<span class="muted">${b.eta ? `Expected ${fmtY(b.eta)}` : 'Expected date not set'}</span></div>${still.map(dRow).join('')}${spareRow((b.spareUnits || 0) - spareIn(b))}</div>` : ''}
-          ${[...dl].reverse().map(d => { const mine = lines.filter(x => x.i.dId === d.id); return `<div class="group"><div class="group-h">${pill(`Received (${sum(mine.map(x => x.i.qty)) + d.spare})`, 'green', 'check')}<span class="muted">Delivery ${dl.indexOf(d) + 1}, ${fmtY(d.date)}</span></div>${mine.map(dRow).join('')}${spareRow(d.spare)}</div>`; }).join('')}
+          ${left ? `<div class="group"><div class="group-h">${pill(`Still to come (${left})`)}<span class="muted">${b.eta ? `Expected ${fmtY(b.eta)}` : 'Expected date not set'}</span></div>${still.map(dRow).join('')}${spareRows(spareToCome)}</div>` : ''}
+          ${[...dl].reverse().map(d => { const mine = lines.filter(x => x.i.dId === d.id); return `<div class="group"><div class="group-h">${pill(`Received (${sum(mine.map(x => x.i.qty)) + d.spare})`, 'green', 'check')}<span class="muted">Delivery ${dl.indexOf(d) + 1}, ${fmtY(d.date)}</span></div>${mine.map(dRow).join('')}${spareRows(d.spareBy)}</div>`; }).join('')}
         </section>`;
   return `<div class="page">
     <a class="crumb" href="#batches">${ic('chevL')}Batches</a>
@@ -1178,7 +1259,7 @@ function batchPage(id) {
           ${shipped ? `<div class="rtot">${rbar(got, total)}<span>Total received: ${got} of ${total} units</span></div>` : ''}
           <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Product</th><th class="r ph-hide">Price</th><th class="r">Preordered</th><th class="r ph-hide">Weight</th><th class="r">${shipped ? 'Received' : 'Arrives'}</th></tr></thead><tbody>
             ${skus.map(k => { const p = P(k), q = forOrders[k] || 0; return `<tr><td class="ph-wrap"><span class="who">${thumb(p, 'sm')}<span><span class="strong">${esc(p.name)}</span><small>${esc(p.variant || '')}</small></span></span></td><td class="r ph-hide">${naira(p.price)}</td><td class="r">${q}</td><td class="r ph-hide">${p.kg == null ? pill('Weight needed', 'amber') : `${p.kg * q} kg`}</td><td class="r">${shipped ? rcell(gotBy[k] || 0, q) : '<span class="faint">' + (b.eta ? fmt(b.eta) : 'Not set') + '</span>'}</td></tr>`; }).join('')}
-            ${b.spareUnits ? `<tr><td class="muted ph-wrap">Spare stock to sell</td><td class="ph-hide"></td><td class="r">${b.spareUnits}</td><td class="r ph-hide">${b.spareKg} kg</td><td class="r">${shipped ? rcell(spareIn(b), b.spareUnits) : ''}</td></tr>` : ''}
+            ${b.spareUnits ? `<tr><td class="muted ph-wrap">Spare stock to sell<small>${Object.entries(b.spareBy || {}).filter(([, n]) => n > 0).map(([k, n]) => `${esc(P(k).name)} × ${n}`).join(', ')}</small></td><td class="ph-hide"></td><td class="r">${b.spareUnits}</td><td class="r ph-hide">${b.spareKg} kg</td><td class="r">${shipped ? rcell(spareIn(b), b.spareUnits) : ''}</td></tr>` : ''}
           </tbody></table></div>
         </section>
         ${deliveriesHTML}
@@ -1220,10 +1301,172 @@ function productsPage() {
   const inBatches = id => openBatches().filter(b => (b.lineup || []).includes(id)).map(b => b.name);
   return `<div class="page">
     <div class="ph"><div><h1>Products</h1><p class="sub">What you sell. Weight is used to split each batch’s freight cost.</p></div><div class="acts"><button class="btn primary" data-act="add-product">${ic('plus')}Add product</button></div></div>
-    <div class="tbl-wrap listify"><table class="tbl"><thead><tr><th>Product</th><th class="r">Price</th><th class="r">Supplier cost</th><th class="r">Weight</th><th>Taking orders in</th><th class="r">Preordered</th></tr></thead><tbody>
-      ${list.map(p => { const m = p.cost ? Math.round((p.price - p.cost) / p.price * 100) : null; const ib = inBatches(p.id); return `<tr data-act="edit-product" data-id="${p.id}" style="cursor:pointer"><td><span class="who">${thumb(p)}<span><span class="strong">${esc(p.name)}</span><small>${[esc(p.variant || ''), p.shopify ? 'From Shopify' : ''].filter(Boolean).join(', ')}</small></span></span></td><td class="r">${naira(p.price)}</td><td class="r">${p.cost ? `${naira(p.cost)}<small>${m}% margin</small>` : '<span class="faint">Not set</span>'}</td><td class="r">${p.kg == null ? pill('Weight needed', 'amber') : `${p.kg} kg`}</td><td>${ib.length ? esc(ib.join(', ')) : '<span class="faint">No open batch</span>'}</td><td class="r">${pre(p.id)}</td></tr>`; }).join('')}
+    <div class="tbl-wrap listify"><table class="tbl"><thead><tr><th>Product</th><th class="r">Price</th><th class="r">Supplier cost</th><th class="r">Weight</th><th>Taking orders in</th><th class="r">Preordered</th><th class="r">On hand</th></tr></thead><tbody>
+      ${list.map(p => { const m = p.cost ? Math.round((p.price - p.cost) / p.price * 100) : null; const ib = inBatches(p.id); return `<tr data-act="edit-product" data-id="${p.id}" style="cursor:pointer"><td><span class="who">${thumb(p)}<span><span class="strong">${esc(p.name)}</span><small>${[esc(p.variant || ''), p.shopify ? 'From Shopify' : ''].filter(Boolean).join(', ')}</small></span></span></td><td class="r">${naira(p.price)}</td><td class="r">${p.cost ? `${naira(p.cost)}<small>${m}% margin</small>` : '<span class="faint">Not set</span>'}</td><td class="r">${p.kg == null ? pill('Weight needed', 'amber') : `${p.kg} kg`}</td><td>${ib.length ? esc(ib.join(', ')) : '<span class="faint">No open batch</span>'}</td><td class="r">${pre(p.id)}</td><td class="r"><a href="${stockHref(p.id)}">${stockOf(p.id).onHand}</a></td></tr>`; }).join('')}
     </tbody></table></div>
     <ul class="rowlist">${list.map(p => `<li><a href="#products" data-act="edit-product" data-id="${p.id}">${thumb(p)}<span><strong>${esc(p.name)}</strong><small>${p.variant ? esc(p.variant) + ', ' : ''}${p.kg == null ? 'weight needed' : `${p.kg} kg`}</small></span><span class="r"><span class="num">${naira(p.price)}</span><small class="muted">${pre(p.id)} preordered</small></span></a></li>`).join('')}</ul>
+  </div>`;
+}
+
+/* ---------- Inventory (Shopify inventory: Committed, Available, On hand, Incoming; Square "20 available") ---------- */
+const INV_TABS = [['in', 'In the warehouse'], ['way', 'On the way'], ['all', 'All products']];
+const INV_TEST = { in: s => s.onHand > 0, way: s => s.way > 0, all: () => true };
+let invQuery = '';
+const stockHref = id => `#inventory/${encodeURIComponent(id)}`;
+const num0 = n => n ? String(n) : '<span class="zero">0</span>';
+function invRows(tab) {
+  const q = invQuery.toLowerCase().trim();
+  const rows = stockAll().filter(r => INV_TEST[tab](r.s) && (!q || r.p.name.toLowerCase().includes(q) || String(r.p.variant || '').toLowerCase().includes(q)))
+    .sort((a, b) => b.s.onHand - a.s.onHand || b.s.way - a.s.way || a.p.name.localeCompare(b.p.name));
+  if (!rows.length) return `<div class="tbl-empty">${tab === 'in' ? 'Nothing in the warehouse matches. Stock shows here once you receive a delivery.' : 'No products found. Try another view or search.'}</div>`;
+  return `<div class="tbl-wrap listify"><table class="tbl"><thead><tr><th>Product</th><th class="r" title="Received for a customer’s order and not yet dispatched">For customers</th><th class="r" title="Received and not tied to any order">Spare</th><th class="r" title="For customers plus spare">On hand</th><th class="r" title="Shipped by the supplier and not yet received">On the way</th><th class="r">Dispatched</th></tr></thead><tbody>
+    ${rows.map(({ p, s }) => `<tr data-href="${stockHref(p.id)}"><td><span class="who">${thumb(p)}<span><a class="strong" href="${stockHref(p.id)}" style="color:inherit">${esc(p.name)}</a><small>${esc(p.variant || '')}</small></span></span></td><td class="r">${num0(s.held)}</td><td class="r">${num0(s.spare)}</td><td class="r"><span class="strong">${num0(s.onHand)}</span></td><td class="r">${num0(s.way)}</td><td class="r">${num0(s.out)}</td></tr>`).join('')}
+  </tbody></table></div>
+  <ul class="rowlist">${rows.map(({ p, s }) => `<li><a href="${stockHref(p.id)}">${thumb(p)}<span><strong>${esc(p.name)}</strong><small>${s.held} for customers, ${s.spare} spare${s.way ? `, ${s.way} on the way` : ''}</small></span><span class="r"><span class="num">${s.onHand}</span><small class="muted">on hand</small></span></a></li>`).join('')}</ul>`;
+}
+/* What changed lately across the warehouse: deliveries in, dispatches out, adjustments */
+function stockActivity() {
+  const ev = [];
+  S.batches.forEach(b => (b.deliveries || []).forEach((d, n) => { const q = sum(batchLines(b).filter(x => x.i.dId === d.id).map(x => x.i.qty)) + (d.spare || 0);
+    ev.push({ date: d.date, k: 0, qty: q, text: `Received with the ${b.name}`, sub: `Delivery ${n + 1}`, href: `#batch/${b.id}` }); }));
+  S.moves.forEach(m => ev.push({ date: m.date, k: 1, qty: m.qty, text: `${P(m.sku).name}: ${lc(m.reason)}`, sub: m.note || 'Spare stock adjusted', href: stockHref(m.sku) }));
+  S.dispatches.forEach(d => { const o = orderById(d.orderId); ev.push({ date: d.date, k: 2, qty: -sum(d.lines.map(l => l.qty)), text: `Dispatched to ${o ? custOf(o).name : 'a customer'}`, sub: `Order #${d.orderId}, ${dispatchHow(d)}`, href: `#order/${d.orderId}` }); });
+  return ev.sort((a, b) => toMs(b.date) - toMs(a.date) || b.k - a.k);
+}
+const moveList = ev => `<ul class="plist">${ev.map(e => `<li><span class="d">${fmt(e.date)}</span><span>${e.href ? `<a href="${e.href}" style="color:inherit">${esc(e.text)}</a>` : esc(e.text)}<small>${esc(e.sub || '')}</small></span><span class="a ${e.qty > 0 ? '' : 'due'}">${signed(e.qty)}</span></li>`).join('')}</ul>`;
+function inventoryPage(tab) {
+  tab = INV_TEST[tab] ? tab : 'in';
+  const all = stockAll();
+  const held = sum(all.map(r => r.s.held)), spare = sum(all.map(r => r.s.spare)), way = sum(all.map(r => r.s.way));
+  const out30 = -sum(stockActivity().filter(e => e.k === 2 && dayDiff(e.date) >= -30).map(e => e.qty));
+  const act = stockActivity().slice(0, 8);
+  return `<div class="page">
+    <div class="ph"><div><h1>Inventory</h1><p class="sub">What’s in the Lagos warehouse right now. It goes up when you receive a delivery and down when an order is dispatched.</p></div></div>
+    <section class="panel overview">
+      <div><span class="label">On hand</span><div class="big">${plural(held + spare, 'unit')}</div><span class="muted">Across ${plural(all.filter(r => r.s.onHand > 0).length, 'product')}</span></div>
+      <div class="ov-stats">
+        <a href="#dispatch" title="Received for a customer’s order and not yet dispatched"><span class="label">For customers</span><strong>${held}</strong></a>
+        <div title="Received and not tied to any order"><span class="label">Spare stock</span><strong>${spare}</strong></div>
+        <a href="#inventory?tab=way" title="Shipped by the supplier and not yet received"><span class="label">On the way</span><strong>${way}</strong></a>
+        <a href="#dispatch?tab=done" title="Units dispatched in the last 30 days"><span class="label">Dispatched</span><strong>${out30}</strong></a>
+      </div>
+    </section>
+    <nav class="tabs" aria-label="Inventory views">${INV_TABS.map(([k, l]) => `<a href="#inventory?tab=${k}" class="${k === tab ? 'on' : ''}" ${k === tab ? 'aria-current="page"' : ''}>${l}<span class="n">${all.filter(r => INV_TEST[k](r.s)).length}</span></a>`).join('')}</nav>
+    <div class="toolbar"><div class="search-in">${ic('search')}<input id="iq" type="search" placeholder="Search products" value="${esc(invQuery)}" aria-label="Search inventory"></div></div>
+    <div id="irows" data-tab="${tab}" style="margin-bottom:48px">${invRows(tab)}</div>
+    <section class="sec">
+      <div class="sec-h"><h2>Recent activity</h2></div>
+      ${act.length ? moveList(act) : '<div class="tbl-empty">Nothing has come in or gone out yet.</div>'}
+    </section>
+  </div>`;
+}
+/* One product's stock (Shopify product page "Inventory" card and its adjustment history) */
+function stockPage(id) {
+  const p = P(id);
+  if (!p) return `<div class="page"><div class="empty"><strong>This product doesn’t exist.</strong><a href="#inventory">Back to inventory</a></div></div>`;
+  const s = stockOf(id);
+  const here = S.orders.flatMap(o => { const c = calc(o); return c.items.filter(i => i.sku === id && i.receivedOn && !i.handedOver).map(i => ({ o, c, i })); })
+    .sort((a, b) => toMs(a.i.receivedOn) - toMs(b.i.receivedOn) || String(a.i.shelf).localeCompare(String(b.i.shelf), undefined, { numeric: true }));
+  const coming = S.batches.filter(onTheWay).map(b => ({ b, cust: sum(batchLines(b).filter(x => x.i.sku === id && !isIn(x.i)).map(x => x.i.qty)), sp: ((b.spareBy || {})[id] || 0) - spareGot(b, id) })).filter(x => x.cust + x.sp > 0);
+  const hist = stockHistory(id).reverse();
+  return `<div class="page">
+    <a class="crumb" href="#inventory">${ic('chevL')}Inventory</a>
+    <div class="ph">
+      <div class="who-h">${thumb(p)}<div><h1>${esc(p.name)}</h1><p class="sub">${[esc(p.variant || ''), p.kg == null ? 'weight needed' : `${p.kg} kg each`].filter(Boolean).join(', ')}</p></div></div>
+      <div class="acts"><button class="btn" data-act="edit-product" data-id="${esc(id)}">Edit product</button><button class="btn" data-act="adjust" data-id="${esc(id)}">Adjust spare stock</button></div>
+    </div>
+    <section class="panel overview">
+      <div><span class="label">On hand</span><div class="big">${plural(s.onHand, 'unit')}</div><span class="muted">In the Lagos warehouse</span></div>
+      <div class="ov-stats">
+        <div><span class="label">For customers</span><strong>${s.held}</strong></div>
+        <div><span class="label">Spare stock</span><strong>${s.spare}</strong></div>
+        <div><span class="label">On the way</span><strong>${s.way}</strong></div>
+        <div><span class="label">Dispatched</span><strong>${s.out}</strong></div>
+      </div>
+    </section>
+    <section class="sec">
+      <div class="sec-h"><h2>In the warehouse <span class="n">${s.onHand}</span></h2></div>
+      ${s.onHand > 0 ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Shelf</th><th>Held for</th><th class="ph-hide">In Lagos since</th><th>Status</th><th class="r">Units</th></tr></thead><tbody>
+        ${here.map(({ o, c, i }) => `<tr data-href="#order/${o.id}"><td class="strong">${esc(i.shelf || 'Not set')}</td><td><a href="#order/${o.id}" style="color:inherit">${esc(custOf(o).name)}</a><small>Order #${o.id}</small></td><td class="ph-hide muted">${fmtY(i.receivedOn)}</td><td>${c.fulfillable.includes(i) ? pill('Ready to dispatch', 'amber') : pill('On hold')}</td><td class="r">${i.qty}</td></tr>`).join('')}
+        ${s.spare > 0 ? `<tr><td class="faint">None</td><td>Spare stock<small>Not tied to an order</small></td><td class="ph-hide"></td><td>${pill('Spare')}</td><td class="r">${s.spare}</td></tr>` : ''}
+      </tbody></table></div>` : `<div class="tbl-empty">None in the warehouse right now.</div>`}
+    </section>
+    ${coming.length ? `<section class="sec">
+      <div class="sec-h"><h2>On the way <span class="n">${s.way}</span></h2></div>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Batch</th><th>Expected</th><th class="r">For customers</th><th class="r">Spare</th></tr></thead><tbody>
+        ${coming.map(({ b, cust, sp }) => `<tr data-href="#batch/${b.id}"><td><a class="strong" href="#batch/${b.id}" style="color:inherit">${esc(b.name)}</a><small>${b.ref}</small></td><td>${b.eta ? fmtY(b.eta) : '<span class="faint">Not set</span>'}</td><td class="r">${num0(cust)}</td><td class="r">${num0(sp)}</td></tr>`).join('')}
+      </tbody></table></div>
+    </section>` : ''}
+    <section class="sec">
+      <div class="sec-h"><h2>Stock history</h2></div>
+      ${hist.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date</th><th>Activity</th><th class="r">Change</th><th class="r">On hand after</th></tr></thead><tbody>
+        ${hist.map(e => `<tr ${e.href ? `data-href="${e.href}"` : ''}><td class="muted">${fmtY(e.date)}</td><td class="wrap">${esc(e.text)}<small>${esc(e.sub)}</small></td><td class="r"><span class="chg ${e.qty > 0 ? 'in' : ''}">${signed(e.qty)}</span></td><td class="r">${e.after}</td></tr>`).join('')}
+      </tbody></table></div>` : '<div class="tbl-empty">Nothing has come in or gone out yet.</div>'}
+    </section>
+  </div>`;
+}
+
+/* ---------- Dispatch (Square "Shipments": To-do and Shipped; Shopify fulfillment) ---------- */
+const DSP_TABS = [['todo', 'To dispatch'], ['hold', 'On hold in the warehouse'], ['done', 'Dispatched']];
+let dspQuery = '';
+function dispatchData() {
+  const all = S.orders.map(o => ({ o, c: calc(o), cu: custOf(o) }));
+  const todo = all.filter(x => x.c.fulfillable.length).sort((a, b) => toMs(a.o.created) - toMs(b.o.created));
+  const hold = all.map(x => ({ ...x, its: x.c.held.filter(i => i.receivedOn) })).filter(x => x.its.length).sort((a, b) => toMs(a.o.created) - toMs(b.o.created));
+  const done = [...S.dispatches].sort((a, b) => toMs(b.date) - toMs(a.date) || digits(b.id) - digits(a.id));
+  return { todo, hold, done };
+}
+const itemsCell = its => `${its.map(i => `${esc(P(i.sku).name)} × ${i.qty}`).join('<br>')}<small>${its.some(i => i.shelf) ? `Shelf ${its.map(i => i.shelf).filter(Boolean).join(', ')}` : ''}</small>`;
+const itemsLine = its => its.map(i => `${esc(P(i.sku).name)} × ${i.qty}`).join(', ');
+const leavingBy = (o, cu) => !o.delivery ? '<span class="faint">Not chosen</span>' : o.delivery.method === 'pickup' ? `Pickup<small>${STORE.hub}</small>` : `Delivery<small>${esc(placeOf(cu.area))}</small>`;
+function dspRows(tab) {
+  const D = dispatchData();
+  const ok = (o, cu) => matchOrder(o, dspQuery);
+  if (tab === 'todo') {
+    const rows = D.todo.filter(x => ok(x.o));
+    if (!rows.length) return `<div class="tbl-empty">${D.todo.length ? 'No orders found.' : 'Nothing to dispatch right now. Orders show here once their items are in Lagos and the balance is paid.'}</div>`;
+    return `<div class="tbl-wrap listify"><table class="tbl"><thead><tr><th>Order</th><th>Customer</th><th>Items to pack</th><th>Leaving by</th><th class="r">Units</th><th></th></tr></thead><tbody>
+      ${rows.map(({ o, c, cu }) => `<tr data-href="#order/${o.id}"><td><a class="strong" href="#order/${o.id}" style="color:inherit">#${o.id}</a><small>${fmt(o.created)}</small></td><td><span class="who">${av(cu.name)}<span>${esc(cu.name)}</span></span></td><td class="wrap">${itemsCell(c.fulfillable)}</td><td>${leavingBy(o, cu)}</td><td class="r">${sum(c.fulfillable.map(i => i.qty))}</td><td class="r"><button class="btn sm" data-act="fulfill" data-id="${o.id}">Dispatch</button></td></tr>`).join('')}
+    </tbody></table></div>
+    <ul class="rowlist">${rows.map(({ o, c, cu }) => `<li><a href="#order/${o.id}">${av(cu.name, 'md')}<span><strong>${esc(cu.name)}</strong><small>#${o.id}. ${itemsLine(c.fulfillable)}. Shelf ${c.fulfillable.map(i => i.shelf).filter(Boolean).join(', ')}</small></span><span class="r"><button class="btn sm" data-act="fulfill" data-id="${o.id}">Dispatch</button></span></a></li>`).join('')}</ul>`;
+  }
+  if (tab === 'hold') {
+    const rows = D.hold.filter(x => ok(x.o));
+    if (!rows.length) return `<div class="tbl-empty">${D.hold.length ? 'No orders found.' : 'Nothing is waiting in the warehouse.'}</div>`;
+    const why = c => c.reasons.length ? c.reasons.map(r => esc(r.text.replace(/ \(.*\)/, ''))).join('<br>') : 'Waiting for the rest of the order';
+    return `<div class="tbl-wrap listify"><table class="tbl"><thead><tr><th>Order</th><th>Customer</th><th>Items in the warehouse</th><th>Why it’s waiting</th><th class="r">Units</th></tr></thead><tbody>
+      ${rows.map(({ o, c, cu, its }) => `<tr data-href="#order/${o.id}"><td><a class="strong" href="#order/${o.id}" style="color:inherit">#${o.id}</a><small>${fmt(o.created)}</small></td><td><span class="who">${av(cu.name)}<span>${esc(cu.name)}</span></span></td><td class="wrap">${itemsCell(its)}</td><td class="wrap muted">${why(c)}</td><td class="r">${sum(its.map(i => i.qty))}</td></tr>`).join('')}
+    </tbody></table></div>
+    <ul class="rowlist">${rows.map(({ o, c, cu, its }) => `<li><a href="#order/${o.id}">${av(cu.name, 'md')}<span><strong>${esc(cu.name)}</strong><small>#${o.id}. ${itemsLine(its)}</small></span><span class="r">${pill('On hold')}<small class="muted">${plural(sum(its.map(i => i.qty)), 'unit')}</small></span></a></li>`).join('')}</ul>`;
+  }
+  const rows = D.done.map(d => ({ d, o: orderById(d.orderId) })).filter(x => x.o && ok(x.o));
+  if (!rows.length) return `<div class="tbl-empty">${D.done.length ? 'No dispatches found.' : 'Nothing has been dispatched yet.'}</div>`;
+  const how = d => d.method === 'pickup' ? `Picked up<small>${STORE.hub}</small>` : `${esc(d.carrier || 'Courier')}<small>${d.track ? `Tracking ${esc(d.track)}` : 'No tracking number'}</small>`;
+  return `<div class="tbl-wrap listify"><table class="tbl"><thead><tr><th>Dispatch</th><th>Order</th><th>Customer</th><th>Items</th><th>Sent by</th><th class="r">Units</th></tr></thead><tbody>
+    ${rows.map(({ d, o }) => `<tr data-href="#order/${o.id}"><td><span class="strong">${d.id}</span><small>${fmtY(d.date)}</small></td><td><a href="#order/${o.id}" style="color:inherit">#${o.id}</a></td><td><span class="who">${av(custOf(o).name)}<span>${esc(custOf(o).name)}</span></span></td><td class="wrap">${itemsCell(d.lines)}</td><td>${how(d)}</td><td class="r">${sum(d.lines.map(l => l.qty))}</td></tr>`).join('')}
+  </tbody></table></div>
+  <ul class="rowlist">${rows.map(({ d, o }) => `<li><a href="#order/${o.id}">${av(custOf(o).name, 'md')}<span><strong>${esc(custOf(o).name)}</strong><small>${d.id}, #${o.id}. ${itemsLine(d.lines)}</small></span><span class="r"><span class="num">${fmt(d.date)}</span><small class="muted">${d.method === 'pickup' ? 'Picked up' : esc(d.carrier || 'Courier')}</small></span></a></li>`).join('')}</ul>`;
+}
+function dispatchPage(tab) {
+  tab = DSP_TABS.some(t => t[0] === tab) ? tab : 'todo';
+  const D = dispatchData();
+  const units = sum(D.todo.flatMap(x => x.c.fulfillable.map(i => i.qty)));
+  const outOn = test => sum(D.done.filter(d => test(dayDiff(d.date))).flatMap(d => d.lines.map(l => l.qty)));
+  const n = { todo: D.todo.length, hold: D.hold.length, done: D.done.length };
+  return `<div class="page">
+    <div class="ph"><div><h1>Dispatch</h1><p class="sub">Orders leaving the Lagos warehouse, by pickup or courier. Each dispatch takes its units out of inventory.</p></div></div>
+    <section class="panel overview">
+      <div><span class="label">To dispatch</span><div class="big">${plural(D.todo.length, 'order')}</div><span class="muted">${plural(units, 'unit')} to pack</span></div>
+      <div class="ov-stats">
+        <a href="#dispatch?tab=hold" title="In the warehouse, waiting on payment, a delivery method or the rest of the order"><span class="label">On hold</span><strong>${plural(sum(D.hold.flatMap(x => x.its.map(i => i.qty))), 'unit')}</strong></a>
+        <a href="#dispatch?tab=done"><span class="label">Dispatched today</span><strong>${plural(outOn(d => d === 0), 'unit')}</strong></a>
+        <a href="#dispatch?tab=done"><span class="label">Last 7 days</span><strong>${plural(outOn(d => d >= -7), 'unit')}</strong></a>
+        <a href="#inventory" title="Everything in the warehouse, including spare stock"><span class="label">Left in warehouse</span><strong>${plural(warehouseUnits(), 'unit')}</strong></a>
+      </div>
+    </section>
+    <nav class="tabs" aria-label="Dispatch views">${DSP_TABS.map(([k, l]) => `<a href="#dispatch?tab=${k}" class="${k === tab ? 'on' : ''}" ${k === tab ? 'aria-current="page"' : ''}>${l}<span class="n">${n[k]}</span></a>`).join('')}</nav>
+    <div class="toolbar"><div class="search-in">${ic('search')}<input id="dq" type="search" placeholder="Search by order number, customer or phone" value="${esc(dspQuery)}" aria-label="Search dispatches"></div></div>
+    <div id="drows" data-tab="${tab}">${dspRows(tab)}</div>
   </div>`;
 }
 
@@ -1256,7 +1499,7 @@ function customerPage(id) {
     </div>
     <section class="panel overview">
       <div><span class="label">Balance due</span><div class="big">${naira(due)}</div><span class="muted">${due ? 'Across open orders' : 'Nothing owed right now'}</span></div>
-      <div class="ov-stats three"><div><span class="label">Paid</span><strong class="green">${naira(paid)}</strong></div><div><span class="label">Orders</span><strong>${os.length}</strong></div><div><span class="label">Fulfilled</span><strong>${os.filter(x => x.c.delivered).length}</strong></div></div>
+      <div class="ov-stats three"><div><span class="label">Paid</span><strong class="green">${naira(paid)}</strong></div><div><span class="label">Orders</span><strong>${os.length}</strong></div><div><span class="label">Dispatched</span><strong>${os.filter(x => x.c.delivered).length}</strong></div></div>
     </section>
     <div class="detail">
       <div class="d-main">
@@ -1475,7 +1718,7 @@ function createBatch() {
   const keys = Object.keys(bd.lines);
   const used = S.batches.map(x => x.shelf);
   const b = { id: 'B' + Date.now(), name: bd.name.trim(), ref: nextRef(), from: bd.from, status: 'open', createdOn: TODAY, closesOn: bd.closesOn, shippedOn: null, eta: bd.eta || null, receivedOn: null, ratePerKg: null, cost: null, deliveries: [],
-    spareUnits: sum(keys.map(k => bd.lines[k].spare)), spareKg: sum(keys.map(k => P(k).kg * bd.lines[k].spare)), shelf: 'EFGHIJKLMNOPQRSTUVWXYZ'.split('').find(l => !used.includes(l)) || 'Z', lineup: keys, log: [] };
+    spareUnits: sum(keys.map(k => bd.lines[k].spare)), spareBy: Object.fromEntries(keys.filter(k => bd.lines[k].spare > 0).map(k => [k, bd.lines[k].spare])), spareKg: sum(keys.map(k => P(k).kg * bd.lines[k].spare)), shelf: 'EFGHIJKLMNOPQRSTUVWXYZ'.split('').find(l => !used.includes(l)) || 'Z', lineup: keys, log: [] };
   b.log.push({ date: TODAY, text: `Batch created with ${plural(keys.length, 'product')}. Taking preorders until ${fmtY(b.closesOn)}`, kind: 'event' });
   if (b.spareUnits) b.log.push({ date: TODAY, text: `${plural(b.spareUnits, 'spare unit')} added for stock`, kind: 'event' });
   S.batches.push(b);
@@ -1829,37 +2072,81 @@ function deliveryModal(o) {
     },
   });
 }
-/* Fulfill (Shopify "Mark as fulfilled") */
+/* Dispatch (Shopify "Mark as fulfilled": "2 items selected", a checkbox per line, tracking number, carrier, notify the customer).
+   It writes a dispatch record, and the units leave the warehouse count. */
 function fulfillModal(o) {
   const c = calc(o), cu = custOf(o);
   let method = o.delivery ? o.delivery.method : 'pickup';
-  const titleTxt = method === 'pickup' && o.delivery ? 'Mark as picked up' : 'Mark as fulfilled';
+  const pickup = method === 'pickup' && o.delivery;
+  const idx = i => c.items.indexOf(i);
+  const sel = new Set(c.fulfillable.map(idx));
+  const before = warehouseUnits();
   openModal({
-    title: titleTxt,
-    body: () => `<div style="margin-bottom:12px">${c.fulfillable.map(i => `<div class="line" style="grid-template-columns:44px 1fr auto">${thumb(i.p)}<div><div class="ln">${esc(i.p.name)}</div><div class="ls">${esc(i.p.variant || '')}. Shelf ${i.shelf}</div></div><div class="num">${i.qty} of ${i.qty}</div></div>`).join('')}</div>
+    title: `Dispatch order #${o.id}`,
+    body: () => `<p>For ${esc(cu.name)}. ${o.delivery ? (pickup ? `Pickup at ${STORE.hub}.` : `Delivery to ${esc(placeOf(cu.area))}.`) : ''} Tick what is leaving the warehouse now.</p>
+      <div class="rcv-top"><span class="label" id="fm-n"></span></div>
+      <div style="margin-bottom:12px">${c.fulfillable.map(i => `<label class="rcv-h" style="padding:8px 0"><input type="checkbox" data-fi="${idx(i)}" checked>${thumb(i.p)}<span><strong>${esc(i.p.name)}</strong><small>${[esc(i.p.variant || ''), `Shelf ${i.shelf || 'not set'}`].filter(Boolean).join('. ')}</small></span><span class="num">${i.qty} of ${i.qty}</span></label>`).join('')}</div>
       ${!o.delivery ? `<div class="field"><span class="label">How is it leaving?</span>${seg('fm', ['Pickup', 'Courier'], 'Pickup')}</div>` : ''}
       <div id="fm-courier" ${method === 'courier' ? '' : 'hidden'}><div class="grid2">
         <div class="field"><label for="fm-track">Tracking number</label><input id="fm-track" autocomplete="off"></div>
         <div class="field"><label for="fm-carrier">Courier</label><select id="fm-carrier">${CARRIERS.map(x => `<option>${x}</option>`).join('')}</select></div>
-      </div><p class="help" style="margin:-6px 0 8px">Delivering to ${esc(placeOf(cu.area))}</p></div>
+      </div></div>
       <label class="check"><input type="checkbox" id="fm-notify" checked> Send a notification to the customer</label>`,
-    foot: () => `${cancelBtn}<button class="btn primary" id="fm-go">${titleTxt}</button>`,
+    foot: () => `<span class="left" id="fm-left"></span>${cancelBtn}<button class="btn primary" id="fm-go">Dispatch</button>`,
     mount(el) {
+      const picks = () => c.fulfillable.filter(i => sel.has(idx(i)));
+      const upd = () => {
+        const n = sum(picks().map(i => i.qty));
+        $('#fm-n', el).textContent = `${plural(picks().length, 'item')} selected`;
+        $('#fm-left', el).textContent = n ? `Leaves ${plural(before - n, 'unit')} in the warehouse` : 'Nothing ticked';
+        const go = $('#fm-go', el); go.disabled = !n; go.textContent = !n ? 'Dispatch' : pickup ? `Mark ${plural(n, 'unit')} as picked up` : `Dispatch ${plural(n, 'unit')}`;
+      };
+      $$('[data-fi]', el).forEach(b => b.addEventListener('change', () => { const k = Number(b.dataset.fi); if (b.checked) sel.add(k); else sel.delete(k); upd(); }));
       segField(el, 'fm', v => { method = v === 'Pickup' ? 'pickup' : 'courier'; $('#fm-courier', el).hidden = method !== 'courier'; });
       $('#fm-go', el).addEventListener('click', () => {
-        const track = ($('#fm-track', el) || {}).value || '', carrier = ($('#fm-carrier', el) || {}).value || '', notify = $('#fm-notify', el).checked;
-        const keys = c.fulfillable.map(i => i.sku + i.batchId);
+        const out = picks(); if (!out.length) return;
+        const track = method === 'courier' ? $('#fm-track', el).value.trim() : '', carrier = method === 'courier' ? $('#fm-carrier', el).value : '', notify = $('#fm-notify', el).checked;
+        let d;
         commit(() => {
           if (!o.delivery) o.delivery = { method, fee: 0 };
-          o.items.forEach(i => { if (keys.includes(i.sku + i.batchId)) i.handedOver = true; });
-          const names = andList(c.fulfillable.map(i => i.p.name));
-          logTo(o, method === 'pickup' ? `${names} picked up from ${STORE.hub}` : `${names} fulfilled by courier (${carrier}${track ? `, tracking ${track}` : ''})`);
-          if (notify) logTo(o, 'Fulfillment notification sent on WhatsApp');
+          d = { id: 'D' + (++S.dseq), date: TODAY, orderId: o.id, method, carrier, track, lines: out.map(i => ({ sku: i.sku, qty: i.qty, shelf: i.shelf || null, batchId: i.batchId })) };
+          S.dispatches.push(d);
+          out.forEach(i => { const it = o.items[idx(i)]; it.handedOver = true; it.dispatchId = d.id; });
+          const names = andList(out.map(i => i.p.name));
+          logTo(o, method === 'pickup' ? `${names} picked up from ${STORE.hub} (${d.id})` : `${names} dispatched by courier (${carrier}${track ? `, tracking ${track}` : ''}, ${d.id})`);
+          if (notify) logTo(o, 'Dispatch notification sent on WhatsApp');
           if (o.items.every(i => i.handedOver)) o.deliveredOn = TODAY;
           if (o.shopify) { const whole = o.items.every(i => i.handedOver); logTo(o, `${whole ? 'Order' : names} marked as fulfilled in Shopify. Shopify didn’t email the customer`); shopLog(`Order #${o.id} ${whole ? '' : 'partly '}marked as fulfilled in Shopify`); }
         });
-        closeModal(); toast(method === 'pickup' ? 'Marked as picked up' : 'Marked as fulfilled');
+        closeModal(); toast(`${method === 'pickup' ? 'Marked as picked up' : 'Dispatched'}. ${plural(warehouseUnits(), 'unit')} left in the warehouse`, { href: '#inventory', label: 'View inventory' });
       });
+      upd();
+    },
+  });
+}
+/* Adjust spare stock (Shopify inventory adjustment: new quantity, the change, a reason; Square adjustment reasons) */
+const ADJ_REASONS = ['Damaged', 'Lost or stolen', 'Gift or promotion', 'Sold in person', 'Returned to stock', 'Count correction'];
+function adjustModal(sku) {
+  const p = P(sku), cur = stockOf(sku).spare;
+  let next = cur;
+  openModal({
+    title: 'Adjust spare stock', size: 'sm',
+    body: () => `<div class="line" style="grid-template-columns:44px 1fr">${thumb(p)}<div><div class="ln">${esc(p.name)}</div><div class="ls">${esc(p.variant || '')}</div></div></div>
+      <div class="field"><label for="aj-q">Spare units on the shelf now</label><input id="aj-q" type="number" min="0" inputmode="numeric" value="${cur}"></div>
+      <div class="adj-now"><span>Spare stock</span><strong id="aj-chg"></strong></div>
+      <div class="field"><label for="aj-r">Reason</label><select id="aj-r">${ADJ_REASONS.map(r => `<option>${r}</option>`).join('')}</select></div>
+      <div class="field"><label for="aj-n">Note <span class="opt-l">(optional)</span></label><input id="aj-n" autocomplete="off"></div>
+      <p class="help">This changes spare stock only. Units held for a customer leave when their order is dispatched.</p>`,
+    foot: () => `${cancelBtn}<button class="btn primary" id="aj-go" disabled>Save</button>`,
+    mount(el) {
+      const upd = () => { $('#aj-chg', el).textContent = next === cur ? `${cur}` : `${cur} → ${next} (${signed(next - cur)})`; $('#aj-go', el).disabled = next === cur; };
+      $('#aj-q', el).addEventListener('input', e => { next = Math.max(0, Math.floor(Number(e.target.value) || 0)); upd(); });
+      $('#aj-go', el).addEventListener('click', () => {
+        const reason = $('#aj-r', el).value, note = $('#aj-n', el).value.trim();
+        commit(() => { S.moves.push({ id: 'm' + Date.now(), date: TODAY, sku, qty: next - cur, reason, note }); });
+        closeModal(); toast(`Spare stock updated. ${plural(stockOf(sku).onHand, 'unit')} on hand`);
+      });
+      upd();
     },
   });
 }
@@ -1869,7 +2156,7 @@ function releaseModal(o) {
   const here = c.held.filter(i => i.here), away = c.missing;
   openModal({
     title: 'Release hold?', size: 'sm',
-    body: () => `<p>${andList(away.map(i => `${esc(i.p.name)} is ${batchWhen(i.b)}`))}. Releasing the hold lets you fulfill the ${andList(here.map(i => esc(i.p.name)))} now. The rest of the order stays on hold.</p>
+    body: () => `<p>${andList(away.map(i => `${esc(i.p.name)} is ${batchWhen(i.b)}`))}. Releasing the hold lets you dispatch the ${andList(here.map(i => esc(i.p.name)))} now. The rest of the order stays on hold.</p>
       <label class="check"><input type="checkbox" id="rl-ok"> ${esc(cu.name)} agreed to receive this order in two parts</label>`,
     foot: () => `${cancelBtn}<button class="btn primary" id="rl-go" disabled>Release hold</button>`,
     mount(el) {
@@ -1900,16 +2187,19 @@ function transitModal(b) {
    checkboxes with "10 items selected"; Fresha "Receive order" with Ordered and Received; Fresha "Stock order partially received".) */
 function receiveModal(b) {
   const lines = batchLines(b).sort((x, y) => toMs(x.o.created) - toMs(y.o.created));
-  const skus = [...new Set([...(b.lineup || []), ...lines.map(x => x.i.sku)])].filter(k => lines.some(x => x.i.sku === k));
+  const plan = b.spareBy || {};
+  const skus = [...new Set([...(b.lineup || []), ...lines.map(x => x.i.sku), ...Object.keys(plan)])].filter(k => lines.some(x => x.i.sku === k) || plan[k]);
+  const spLeft = k => (plan[k] || 0) - spareGot(b, k);
   const keyOf = x => `${x.o.id}:${x.o.items.indexOf(x.i)}`;
   const waiting = lines.filter(x => !isIn(x.i));
   const spareLeft = (b.spareUnits || 0) - spareIn(b);
   const total = batchTotal(b), before = batchGot(b);
   const last = lastDelivery(b);
   const sel = new Set();
-  const L = { date: TODAY, spare: 0, rest: b.eta && b.eta > TODAY ? b.eta : rel(7), notify: true };
+  const L = { date: TODAY, sp: {}, rest: b.eta && b.eta > TODAY ? b.eta : rel(7), notify: true };
   const chosen = () => waiting.filter(x => sel.has(keyOf(x)));
-  const nowUnits = () => sum(chosen().map(x => x.i.qty)) + L.spare;
+  const spNow = () => sum(Object.values(L.sp));
+  const nowUnits = () => sum(chosen().map(x => x.i.qty)) + spNow();
   const who = x => `#${x.o.id} ${esc(custOf(x.o).name)}`;
   openModal({
     title: `Receive items`,
@@ -1921,14 +2211,16 @@ function receiveModal(b) {
       <div class="rcv-top"><span class="label" id="rc-tot"></span>${waiting.length || spareLeft ? '<button type="button" class="link" id="rc-all">Select everything still to come</button>' : ''}</div>
       <div id="rc-bar" style="margin-bottom:10px"></div>
       ${skus.map(k => { const its = lines.filter(x => x.i.sku === k), p = P(k), wait = its.filter(x => !isIn(x.i)); return `<div class="rcv-g">
-        <label class="rcv-h"><input type="checkbox" data-sku="${k}" ${wait.length ? '' : 'checked disabled'} aria-label="All ${esc(p.name)}">${thumb(p)}<span><strong>${esc(p.name)}</strong><small>${esc(p.variant || '')}</small></span><span class="num muted" data-cnt="${k}"></span></label>
+        <label class="rcv-h">${its.length ? `<input type="checkbox" data-sku="${k}" ${wait.length ? '' : 'checked disabled'} aria-label="All ${esc(p.name)}">` : '<span></span>'}${thumb(p)}<span><strong>${esc(p.name)}</strong><small>${esc(p.variant || '')}</small></span><span class="num muted" data-cnt="${k}"></span></label>
         ${its.map(x => isIn(x.i)
           ? `<div class="rcv-i done">${ic('check')}<span>${who(x)}<small>Received ${fmt(x.i.receivedOn)}${x.i.shelf ? `, shelf ${x.i.shelf}` : ''}</small></span><span class="num">× ${x.i.qty}</span></div>`
           : `<label class="rcv-i"><input type="checkbox" data-k="${keyOf(x)}" data-of="${k}"><span>${who(x)}<small>Ordered ${fmt(x.o.created)}</small></span><span class="num">× ${x.i.qty}</span></label>`).join('')}
+        ${!plan[k] ? '' : spLeft(k) > 0
+          ? `<div class="rcv-i sp"><span></span><span>Spare stock<small>${spareGot(b, k)} of ${plan[k]} received so far</small></span><span class="qty-in"><input data-sp="${k}" type="number" min="0" max="${spLeft(k)}" value="0" inputmode="numeric" aria-label="Spare ${esc(p.name)} in this delivery">of ${spLeft(k)}</span></div>`
+          : `<div class="rcv-i done">${ic('check')}<span>Spare stock<small>All ${plan[k]} received</small></span><span class="num">× ${plan[k]}</span></div>`}
       </div>`; }).join('')}
-      ${b.spareUnits ? `<div class="rcv-sp"><span></span>${thumb({ icon: 'box' })}<span><strong>Spare stock</strong><small>${spareIn(b)} of ${b.spareUnits} received so far</small></span>${spareLeft ? `<span class="qty-in"><input id="rc-spare" type="number" min="0" max="${spareLeft}" value="0" inputmode="numeric" aria-label="Spare units in this delivery">of ${spareLeft}</span>` : '<span class="num muted">All in</span>'}</div>` : ''}
       <label class="check" id="rc-notify-l"><input type="checkbox" id="rc-notify" checked> Send customers whose items arrived an update on WhatsApp</label>
-      <p class="help">Each item gets a shelf number. Orders whose items have all arrived can move on while the rest of the batch is on its way.</p>`,
+      <p class="help">Each item gets a shelf number and is added to inventory. Orders whose items have all arrived can move on while the rest of the batch is on its way.</p>`,
     foot: () => `<span class="left" id="rc-left"></span>${cancelBtn}<button class="btn primary" id="rc-go" disabled>Receive items</button>`,
     mount(el) {
       const upd = () => {
@@ -1937,9 +2229,9 @@ function receiveModal(b) {
         $('#rc-bar', el).innerHTML = rbar(before, total, n);
         skus.forEach(k => {
           const its = lines.filter(x => x.i.sku === k), wait = its.filter(x => !isIn(x.i)), on = wait.filter(x => sel.has(keyOf(x)));
-          $(`[data-cnt="${k}"]`, el).textContent = `${sum(its.filter(x => isIn(x.i)).map(x => x.i.qty)) + sum(on.map(x => x.i.qty))} of ${sum(its.map(x => x.i.qty))}`;
+          $(`[data-cnt="${k}"]`, el).textContent = `${sum(its.filter(x => isIn(x.i)).map(x => x.i.qty)) + sum(on.map(x => x.i.qty)) + spareGot(b, k) + (L.sp[k] || 0)} of ${sum(its.map(x => x.i.qty)) + (plan[k] || 0)}`;
           const box = $(`[data-sku="${k}"]`, el);
-          if (wait.length) { box.checked = on.length === wait.length; box.indeterminate = on.length > 0 && on.length < wait.length; }
+          if (box && wait.length) { box.checked = on.length === wait.length; box.indeterminate = on.length > 0 && on.length < wait.length; }
         });
         $('#rc-rest-f', el).hidden = after >= total;
         $('#rc-notify-l', el).hidden = !chosen().length;
@@ -1954,23 +2246,25 @@ function receiveModal(b) {
         $$(`[data-of="${c.dataset.sku}"]`, el).forEach(x => { x.checked = c.checked; });
         upd();
       }));
-      const sp = $('#rc-spare', el);
-      if (sp) {
-        sp.addEventListener('input', () => { L.spare = Math.max(0, Math.min(spareLeft, Math.floor(Number(sp.value) || 0))); upd(); });
-        sp.addEventListener('change', () => { sp.value = L.spare; });
-      }
+      const sps = $$('[data-sp]', el);
+      sps.forEach(sp => {
+        const k = sp.dataset.sp;
+        sp.addEventListener('input', () => { L.sp[k] = Math.max(0, Math.min(spLeft(k), Math.floor(Number(sp.value) || 0))); upd(); });
+        sp.addEventListener('change', () => { sp.value = L.sp[k] || 0; });
+      });
       const all = $('#rc-all', el);
-      if (all) all.addEventListener('click', () => { waiting.forEach(x => sel.add(keyOf(x))); $$('[data-k]', el).forEach(x => { x.checked = true; }); if (sp) { sp.value = spareLeft; L.spare = spareLeft; } upd(); });
+      if (all) all.addEventListener('click', () => { waiting.forEach(x => sel.add(keyOf(x))); $$('[data-k]', el).forEach(x => { x.checked = true; }); sps.forEach(sp => { const k = sp.dataset.sp; L.sp[k] = spLeft(k); sp.value = L.sp[k]; }); upd(); });
       $('#rc-date', el).addEventListener('change', e => { L.date = e.target.value; upd(); });
       $('#rc-rest', el).addEventListener('change', e => { L.rest = e.target.value; });
       $('#rc-notify', el).addEventListener('change', e => { L.notify = e.target.checked; });
       $('#rc-go', el).addEventListener('click', () => {
         const picks = chosen();
-        if (!picks.length && !L.spare) return;
+        if (!picks.length && !spNow()) return;
         const date = L.date > TODAY ? TODAY : L.date;
         let left = 0;
         commit(() => {
-          const d = { id: 'd' + (b.deliveries.length + 1), date, spare: L.spare };
+          const spareBy = Object.fromEntries(Object.entries(L.sp).filter(([, n]) => n > 0));
+          const d = { id: 'd' + (b.deliveries.length + 1), date, spare: spNow(), spareBy };
           b.deliveries.push(d);
           let n = Math.max(0, ...batchLines(b).map(x => Number(String(x.i.shelf || '').slice(b.shelf.length)) || 0));
           picks.forEach(({ o, i }) => { i.receivedOn = date; i.dId = d.id; i.shelf = b.shelf + (++n); o.log.push({ date, text: `${P(i.sku).name} received in Lagos. Shelf ${i.shelf}`, kind: 'event' }); });
@@ -1981,7 +2275,7 @@ function receiveModal(b) {
         const os = [...new Set(picks.map(x => x.o))];
         const done = left ? `Delivery recorded. ${plural(left, 'unit')} still to come` : 'Everything has arrived';
         if (L.notify && os.length) reviewModal(os, msgBalance, 'Arrival update sent on WhatsApp', { done, remind: o => { const c = calc(o); return !c.missing.length && c.shipKnown; } });
-        else { closeModal(); toast(done); }
+        else { closeModal(); toast(`${done}. ${plural(warehouseUnits(), 'unit')} now in the warehouse`, { href: '#inventory', label: 'View inventory' }); }
       });
       upd();
     },
@@ -2351,7 +2645,7 @@ function shopifyPage() {
           <ul class="facts">
             <li><div class="fh">Store</div><p>${SHOP.store}</p><p class="muted">Connected ${fmtY(sh.connectedOn)}</p></li>
             <li><div class="fh">From Shopify</div><p>New orders, edits, cancellations and refunds</p><p class="muted">Shopify’s own Fulfilled status is ignored.</p></li>
-            <li><div class="fh">To Shopify</div><p>Fulfilled, when an order is handed over</p><p class="muted">Shopify doesn’t email the customer.</p></li>
+            <li><div class="fh">To Shopify</div><p>Fulfilled, when an order is dispatched</p><p class="muted">Shopify doesn’t email the customer.</p></li>
             <li><div class="fh">Nightly check</div><p>Every night at 2am</p><p class="muted">Asks Shopify for the last two days of orders and adds any it missed.</p></li>
             ${sh.file ? `<li><div class="fh">Last import</div><p>${esc(sh.file.name)}</p><p class="muted">${plural(sh.file.count, 'order')}, ${fmtAt(sh.file.at)}</p></li>` : ''}
           </ul></section>
@@ -2581,7 +2875,7 @@ function blog(b, text, kind = 'event') { b.log.push({ date: TODAY, text, kind })
 function settleBatches() {
   S.batches.filter(b => b.status === 'received').forEach(b => {
     const items = S.orders.flatMap(o => o.items.filter(i => i.batchId === b.id));
-    if (items.length && items.every(i => i.handedOver)) { b.status = 'closed'; blog(b, 'All orders fulfilled. Batch closed'); }
+    if (items.length && items.every(i => i.handedOver)) { b.status = 'closed'; blog(b, 'All orders dispatched. Batch closed'); }
   });
 }
 function commit(fn) { fn(); settleBatches(); save(); render(); }
@@ -2601,6 +2895,7 @@ const ACT = {
   'transit': el => transitModal(batchById(el.dataset.id)),
   'receive': el => receiveModal(batchById(el.dataset.id)),
   'freight': el => freightModal(batchById(el.dataset.id)),
+  'adjust': el => adjustModal(el.dataset.id),
   'change-customer': el => {
     closeMenus();
     const o = orderById(el.dataset.id);
@@ -2666,9 +2961,9 @@ const ACT = {
   'm-close': () => { if (modal && modal.noClose) return; closeModal(); },
   'reset': () => openModal({
     title: 'Reset demo data?', size: 'sm',
-    body: () => '<p>Every order, batch, product, customer and Shopify order goes back to the sample data. This can’t be undone.</p>',
+    body: () => '<p>Every order, batch, product, customer, stock count and Shopify order goes back to the sample data. This can’t be undone.</p>',
     foot: () => `${cancelBtn}<button class="btn primary" id="rs-go">Reset demo data</button>`,
-    mount(el) { $('#rs-go', el).addEventListener('click', () => { S = seed(); ensureShopify(); save(); od = null; bd = null; closeModal(); location.hash = '#home'; render(); toast('Demo data reset'); }); },
+    mount(el) { $('#rs-go', el).addEventListener('click', () => { S = seed(); ensureShopify(); ensureStock(); save(); od = null; bd = null; closeModal(); location.hash = '#home'; render(); toast('Demo data reset'); }); },
   }),
 };
 document.addEventListener('click', e => {
@@ -2744,11 +3039,13 @@ function batchNote(b) {
   if (b.status === 'transit') return !b.eta ? 'In transit' : dayDiff(b.eta) < 0 ? `Expected ${fmt(b.eta)}` : `Expected ${inDays(dayDiff(b.eta))}`;
   if (b.status === 'partial') return `${batchGot(b)} of ${batchTotal(b)} received`;
   if (!b.cost) return 'Freight cost needed';
-  return `${plural(unitsLeft(b), 'unit')} to fulfill`;
+  return `${plural(unitsLeft(b), 'unit')} to dispatch`;
 }
 
 /* ---------- Render ---------- */
-const NAV = [['home', 'Home', '#home', 'home'], ['orders', 'Orders', '#orders', 'orders'], ['batches', 'Batches', '#batches', 'batches'], ['products', 'Products', '#products', 'box'], ['customers', 'Customers', '#customers', 'customers']];
+const NAV = [['home', 'Home', '#home', 'home'], ['orders', 'Orders', '#orders', 'orders'], ['batches', 'Batches', '#batches', 'batches'], ['inventory', 'Inventory', '#inventory', 'shelves'], ['dispatch', 'Dispatch', '#dispatch', 'truck'], ['products', 'Products', '#products', 'box'], ['customers', 'Customers', '#customers', 'customers']];
+// Phones have room for five tabs; Products, Customers and Shopify sit under More on Home
+const PHONE_NAV = ['home', 'orders', 'batches', 'inventory', 'dispatch'];
 let lastPath = null;
 function render() {
   const h = location.hash.slice(1) || 'home';
@@ -2778,6 +3075,8 @@ function render() {
     case 'order': html = orderPage(parts[1]); nav = 'orders'; break;
     case 'batches': html = batchesPage(); break;
     case 'batch': html = batchPage(parts[1]); nav = 'batches'; break;
+    case 'inventory': html = parts[1] ? stockPage(decodeURIComponent(parts[1])) : inventoryPage(params.get('tab')); break;
+    case 'dispatch': html = dispatchPage(params.get('tab')); break;
     case 'products': html = productsPage(); break;
     case 'customers': html = customersPage(); break;
     case 'customer': html = customerPage(parts[1]); nav = 'customers'; break;
@@ -2790,19 +3089,22 @@ function render() {
   const bmOn = parts[0] === 'batch' && bm.some(b => b.id === parts[1]) ? parts[1] : null;
   const sideNav = bmOn ? null : nav;
   $('#sidebar').innerHTML = `<a class="org" href="#home"><span class="org-av">PS</span><span>${STORE.name}<small>PreorderDesk</small></span></a>
-    <nav class="nav" aria-label="Pages">${NAV.map(([k, l, href, icn]) => `<a href="${href}" class="${k === sideNav ? 'on' : ''}" ${k === sideNav ? 'aria-current="page"' : ''}>${ic(icn)}<span>${l}</span>${k === 'orders' && ready ? `<span class="count" title="${plural(ready, 'order')} ready to fulfill">${ready}</span>` : ''}</a>`).join('')}</nav>
+    <nav class="nav" aria-label="Pages">${NAV.map(([k, l, href, icn]) => `<a href="${href}" class="${k === sideNav ? 'on' : ''}" ${k === sideNav ? 'aria-current="page"' : ''}>${ic(icn)}<span>${l}</span>${k === 'dispatch' && ready ? `<span class="count" title="${plural(ready, 'order')} ready to dispatch">${ready}</span>` : ''}</a>`).join('')}</nav>
     ${bm.length ? `<section aria-labelledby="side-bm"><h2 class="side-h" id="side-bm">Active batches</h2><nav class="nav bm" aria-labelledby="side-bm">${bm.map(b => `<a href="#batch/${b.id}" class="${b.id === bmOn ? 'on' : ''}" ${b.id === bmOn ? 'aria-current="page"' : ''}>${ic('batches')}<span>${esc(b.name)}<small>${batchNote(b)}</small></span></a>`).join('')}</nav></section>` : ''}
     <section aria-labelledby="side-sc"><h2 class="side-h" id="side-sc">Sales channels</h2><nav class="nav bm" aria-labelledby="side-sc"><a href="#shopify" class="${nav === 'shopify' ? 'on' : ''}" ${nav === 'shopify' ? 'aria-current="page"' : ''}>${ic('store')}<span>Shopify<small>${shopNote()}</small></span></a></nav></section>
     <div class="side-foot"><span>Sample data<small>Nothing is sent and no real money moves.</small></span><button class="link" data-act="reset">Reset</button></div>`;
-  $('#tabbar').innerHTML = NAV.map(([k, l, href, icn]) => `<a href="${href}" class="${k === nav ? 'on' : ''}" ${k === nav ? 'aria-current="page"' : ''}>${ic(icn)}${l}</a>`).join('');
+  $('#tabbar').innerHTML = NAV.filter(n => PHONE_NAV.includes(n[0])).map(([k, l, href, icn]) => `<a href="${href}" class="${k === nav ? 'on' : ''}" ${k === nav ? 'aria-current="page"' : ''}>${ic(icn)}${l}</a>`).join('');
   $('#newmenu').innerHTML = `<a href="#orders/new">${ic('orders')}New order</a><a href="#batches/new">${ic('batches')}New batch</a><hr><button data-act="add-product">${ic('box')}Add product</button><button data-act="add-customer">${ic('customers')}Add customer</button>`;
   if (parts[0] === 'orders') { const oq = $('#oq'); oq.addEventListener('input', () => { orderQuery = oq.value; $('#orows').innerHTML = orderRows($('#orows').dataset.tab); }); }
+  if (parts[0] === 'inventory' && !parts[1]) { const iq = $('#iq'); iq.addEventListener('input', () => { invQuery = iq.value; $('#irows').innerHTML = invRows($('#irows').dataset.tab); }); }
+  if (parts[0] === 'dispatch') { const dq = $('#dq'); dq.addEventListener('input', () => { dspQuery = dq.value; $('#drows').innerHTML = dspRows($('#drows').dataset.tab); }); }
   document.title = 'PreorderDesk';
 }
 window.addEventListener('hashchange', () => { if (modal) closeModal(); render(); window.scrollTo(0, 0); });
-window.addEventListener('storage', e => { if (e.key === KEY) { S = load(); ensureDeliveries(); ensureShopify(); render(); } });
+window.addEventListener('storage', e => { if (e.key === KEY) { S = load(); ensureDeliveries(); ensureShopify(); ensureStock(); render(); } });
 ensureDeliveries();
 ensureShopify();
+ensureStock();
 render();
 </script>
 </body>
