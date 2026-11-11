@@ -255,6 +255,17 @@ img.thumb{display:block}
 .adj-now{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-2);margin:-4px 0 12px}
 .adj-now strong{color:var(--ink);font-variant-numeric:tabular-nums}
 .rcv-i.sp{cursor:default}
+/* Several orders in one courier run (Shopify "Create shipping labels": a checkbox per order, "4 selected", one action for the set) */
+.tbl .ck{width:18px;padding-right:0}
+.tbl input[type=checkbox],.selrow>input{width:18px;height:18px;margin:0;accent-color:var(--blue);vertical-align:middle}
+.bulk{display:flex;align-items:center;gap:12px;min-height:44px;padding:6px 12px;margin:0 -12px 4px;border-radius:12px;background:var(--fill)}
+.bulk strong{font-weight:500}
+.bulk .sp{flex:1}
+.bulk .muted{font-size:13px}
+.tbl tr.grp td{background:var(--fill);font-size:13px;color:var(--ink-2);padding:8px 12px}
+.tbl tr.grp strong{color:var(--ink);font-weight:500}
+.rowlist li.selrow{display:grid;grid-template-columns:18px minmax(0,1fr);gap:12px;align-items:center}
+.rowlist li.grp{padding:8px 0;color:var(--ink-2);font-size:13px}
 /* Receive items (Shopify "Receive items", Shopify split fulfillment checkboxes, Fresha "Receive order") */
 .rcv-g{border-top:1px solid var(--line-2);padding:10px 0}
 .rcv-g:first-of-type{border-top:0}
@@ -750,6 +761,8 @@ function seed() {
   mk(1040, 'Bisi Afolabi', 'Bodija', 'WhatsApp', -97, [['KB04', 'MAY']], [[47600, -96, 'Bank transfer'], [12800, -10, 'Bank transfer']], { delivery: ['courier', 6000], claim: [22000, 'Bank transfer', 'GTB 0391'], reminded: -4 });
   mk(1044, 'Zainab Bello', 'Gwarinpa', 'Website', -98, [['KB04', 'MAY']], [[68000, -97, 'Paystack'], [15900, -1, 'Paystack']], { delivery: ['courier', 7500] });
   mk(1045, 'Damilola Balogun', 'Yaba', 'WhatsApp', -96, [['KB04', 'MAY']], [[68000, -95, 'Bank transfer']], { delivery: ['courier', 4500], reminded: -6 });
+  // Paid up and going by courier, like Zainab's: two orders that can leave in one courier run
+  mk(1036, 'Ngozi Adeleke', 'Ikeja', 'Website', -102, [['KB04', 'MAY']], [[47600, -101, 'Paystack'], [33300, -2, 'Paystack']], { delivery: ['courier', 4500] });
   // June batch, in delivery order so shelf numbers follow arrival: d1 (9 days ago), d2 (2 days ago), then Amaka's cookware still to come
   mk(1047, 'Tolu Adeyemi', 'Wuse', 'Website', -91, [['GB12', 'JUN', { d: 'd1' }]], [[39000, -91, 'Paystack']]);
   mk(1039, 'Ada Nwosu', 'Ajah', 'Website', -88, [['GB12', 'JUN', { inc: 1, d: 'd1' }]], [[27300, -88, 'Paystack']]);
@@ -791,6 +804,7 @@ function backfillStock(s) {
   let ch = false;
   if (!s.moves) { s.moves = []; ch = true; }
   if (!s.dispatches) { s.dispatches = []; s.dseq = 1000; ch = true; }
+  if (!s.runs) { s.runs = []; s.rseq = 100; ch = true; }
   s.batches.forEach(b => {
     if (!b.spareBy) {
       ch = true; b.spareBy = {};
@@ -895,7 +909,8 @@ function stockHistory(sku) {
   let bal = 0; ev.forEach(e => { bal += e.qty; e.after = bal; });
   return ev;
 }
-const dispatchHow = d => d.method === 'pickup' ? `picked up at ${STORE.hub}` : `by ${d.carrier || 'courier'}${d.track ? `, tracking ${d.track}` : ''}`;
+const dispatchHow = d => d.method === 'pickup' ? `picked up at ${STORE.hub}` : `by ${d.carrier || 'courier'}${d.track ? `, tracking ${d.track}` : ''}${d.runId ? `, run ${d.runId}` : ''}`;
+const runById = id => S.runs.find(r => r.id === id);
 const signed = n => (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n);
 const rbar = (got, total, now = 0) => `<div class="rbar" role="img" aria-label="${got} of ${total} received"><i style="width:${total ? Math.round((got + now) / total * 100) : 0}%" class="now"></i><i style="width:${total ? Math.round(got / total * 100) : 0}%"></i></div>`;
 const lc = s => s.charAt(0).toLowerCase() + s.slice(1);
@@ -1413,22 +1428,41 @@ function dispatchData() {
   const all = S.orders.map(o => ({ o, c: calc(o), cu: custOf(o) }));
   const todo = all.filter(x => x.c.fulfillable.length).sort((a, b) => toMs(a.o.created) - toMs(b.o.created));
   const hold = all.map(x => ({ ...x, its: x.c.held.filter(i => i.receivedOn) })).filter(x => x.its.length).sort((a, b) => toMs(a.o.created) - toMs(b.o.created));
-  const done = [...S.dispatches].sort((a, b) => toMs(b.date) - toMs(a.date) || digits(b.id) - digits(a.id));
+  const done = [...S.dispatches].sort((a, b) => toMs(b.date) - toMs(a.date) || digits(b.runId || b.id) - digits(a.runId || a.id) || digits(a.id) - digits(b.id));
   return { todo, hold, done };
 }
 const itemsCell = its => `${its.map(i => `${esc(P(i.sku).name)} × ${i.qty}`).join('<br>')}<small>${its.some(i => i.shelf) ? `Shelf ${its.map(i => i.shelf).filter(Boolean).join(', ')}` : ''}</small>`;
 const itemsLine = its => its.map(i => `${esc(P(i.sku).name)} × ${i.qty}`).join(', ');
 const leavingBy = (o, cu) => !o.delivery ? '<span class="faint">Not chosen</span>' : o.delivery.method === 'pickup' ? `Pickup<small>${STORE.hub}</small>` : `Delivery<small>${esc(placeOf(cu.area))}</small>`;
+/* Orders ticked on To dispatch, to go out together in one courier run */
+const dspSel = new Set();
+function bulkBar() {
+  const n = dspSel.size;
+  if (!n) return '';
+  const units = sum([...dspSel].flatMap(id => calc(orderById(id)).fulfillable.map(i => i.qty)));
+  return `<div class="bulk" role="status"><strong>${n} selected</strong><span class="muted">${plural(units, 'unit')}</span><span class="sp"></span><button class="link" data-act="dsel-clear">Clear</button><button class="btn primary sm" data-act="run" ${n < 2 ? 'disabled title="Tick at least two orders"' : ''}>${ic('truck')}Dispatch together</button></div>`;
+}
+/* A heading above the first dispatch of each courier run on the Dispatched tab */
+function runHead(d, prev, wrap) {
+  if (!d.runId || (prev && prev.d.runId === d.runId)) return '';
+  const r = runById(d.runId), ds = S.dispatches.filter(x => x.runId === d.runId);
+  return wrap(`<strong>Courier run ${d.runId}</strong>, ${fmtY(d.date)}. ${esc(r ? r.carrier : d.carrier)}${r && r.rider ? `, ${esc(r.rider)}` : ''}${r && r.track ? `, waybill ${esc(r.track)}` : ''}. ${plural(ds.length, 'order')}, ${plural(sum(ds.flatMap(x => x.lines.map(l => l.qty))), 'unit')}`);
+}
 function dspRows(tab) {
   const D = dispatchData();
   const ok = (o, cu) => matchOrder(o, dspQuery);
   if (tab === 'todo') {
     const rows = D.todo.filter(x => ok(x.o));
     if (!rows.length) return `<div class="tbl-empty">${D.todo.length ? 'No orders found.' : 'Nothing to dispatch right now. Orders show here once their items are in Lagos and the balance is paid.'}</div>`;
-    return `<div class="tbl-wrap listify"><table class="tbl"><thead><tr><th>Order</th><th>Customer</th><th>Items to pack</th><th>Leaving by</th><th class="r">Units</th><th></th></tr></thead><tbody>
-      ${rows.map(({ o, c, cu }) => `<tr data-href="#order/${o.id}"><td><a class="strong" href="#order/${o.id}" style="color:inherit">#${o.id}</a><small>${fmt(o.created)}</small></td><td><span class="who">${av(cu.name)}<span>${esc(cu.name)}</span></span></td><td class="wrap">${itemsCell(c.fulfillable)}</td><td>${leavingBy(o, cu)}</td><td class="r">${sum(c.fulfillable.map(i => i.qty))}</td><td class="r"><button class="btn sm" data-act="fulfill" data-id="${o.id}">Dispatch</button></td></tr>`).join('')}
+    const can = x => !!x.o.delivery && x.o.delivery.method === 'courier';
+    const box = x => can(x) ? `<input type="checkbox" data-dsel="${x.o.id}" ${dspSel.has(x.o.id) ? 'checked' : ''} aria-label="Select order #${x.o.id}">` : '';
+    const some = rows.some(can);
+    return `<div id="dbulk">${bulkBar()}</div>
+    <div class="tbl-wrap listify"><table class="tbl"><thead><tr><th class="ck">${some ? '<input type="checkbox" data-dall aria-label="Select all delivery orders">' : ''}</th><th>Order</th><th>Customer</th><th>Items to pack</th><th>Leaving by</th><th class="r">Units</th><th></th></tr></thead><tbody>
+      ${rows.map(({ o, c, cu }) => `<tr data-href="#order/${o.id}"><td class="ck">${box({ o })}</td><td><a class="strong" href="#order/${o.id}" style="color:inherit">#${o.id}</a><small>${fmt(o.created)}</small></td><td><span class="who">${av(cu.name)}<span>${esc(cu.name)}</span></span></td><td class="wrap">${itemsCell(c.fulfillable)}</td><td>${leavingBy(o, cu)}</td><td class="r">${sum(c.fulfillable.map(i => i.qty))}</td><td class="r"><button class="btn sm" data-act="fulfill" data-id="${o.id}">Dispatch</button></td></tr>`).join('')}
     </tbody></table></div>
-    <ul class="rowlist">${rows.map(({ o, c, cu }) => `<li><a href="#order/${o.id}">${av(cu.name, 'md')}<span><strong>${esc(cu.name)}</strong><small>#${o.id}. ${itemsLine(c.fulfillable)}. Shelf ${c.fulfillable.map(i => i.shelf).filter(Boolean).join(', ')}</small></span><span class="r"><button class="btn sm" data-act="fulfill" data-id="${o.id}">Dispatch</button></span></a></li>`).join('')}</ul>`;
+    <ul class="rowlist">${rows.map(({ o, c, cu }) => `<li class="selrow">${box({ o }) || '<span></span>'}<a href="#order/${o.id}">${av(cu.name, 'md')}<span><strong>${esc(cu.name)}</strong><small>#${o.id}. ${itemsLine(c.fulfillable)}. Shelf ${c.fulfillable.map(i => i.shelf).filter(Boolean).join(', ')}. ${o.delivery && o.delivery.method === 'courier' ? `Delivery to ${esc(placeOf(cu.area))}` : 'Pickup'}</small></span><span class="r"><button class="btn sm" data-act="fulfill" data-id="${o.id}">Dispatch</button></span></a></li>`).join('')}</ul>
+    ${some ? '<p class="help">Tick delivery orders to send several with one courier. Pickup orders are handed over one at a time.</p>' : ''}`;
   }
   if (tab === 'hold') {
     const rows = D.hold.filter(x => ok(x.o));
@@ -1443,13 +1477,14 @@ function dspRows(tab) {
   if (!rows.length) return `<div class="tbl-empty">${D.done.length ? 'No dispatches found.' : 'Nothing has been dispatched yet.'}</div>`;
   const how = d => d.method === 'pickup' ? `Picked up<small>${STORE.hub}</small>` : `${esc(d.carrier || 'Courier')}<small>${d.track ? `Tracking ${esc(d.track)}` : 'No tracking number'}</small>`;
   return `<div class="tbl-wrap listify"><table class="tbl"><thead><tr><th>Dispatch</th><th>Order</th><th>Customer</th><th>Items</th><th>Sent by</th><th class="r">Units</th></tr></thead><tbody>
-    ${rows.map(({ d, o }) => `<tr data-href="#order/${o.id}"><td><span class="strong">${d.id}</span><small>${fmtY(d.date)}</small></td><td><a href="#order/${o.id}" style="color:inherit">#${o.id}</a></td><td><span class="who">${av(custOf(o).name)}<span>${esc(custOf(o).name)}</span></span></td><td class="wrap">${itemsCell(d.lines)}</td><td>${how(d)}</td><td class="r">${sum(d.lines.map(l => l.qty))}</td></tr>`).join('')}
+    ${rows.map(({ d, o }, n) => `${runHead(d, rows[n - 1], h => `<tr class="grp"><td colspan="6">${h}</td></tr>`)}<tr data-href="#order/${o.id}"><td><span class="strong">${d.id}</span><small>${fmtY(d.date)}</small></td><td><a href="#order/${o.id}" style="color:inherit">#${o.id}</a></td><td><span class="who">${av(custOf(o).name)}<span>${esc(custOf(o).name)}</span></span></td><td class="wrap">${itemsCell(d.lines)}</td><td>${how(d)}</td><td class="r">${sum(d.lines.map(l => l.qty))}</td></tr>`).join('')}
   </tbody></table></div>
-  <ul class="rowlist">${rows.map(({ d, o }) => `<li><a href="#order/${o.id}">${av(custOf(o).name, 'md')}<span><strong>${esc(custOf(o).name)}</strong><small>${d.id}, #${o.id}. ${itemsLine(d.lines)}</small></span><span class="r"><span class="num">${fmt(d.date)}</span><small class="muted">${d.method === 'pickup' ? 'Picked up' : esc(d.carrier || 'Courier')}</small></span></a></li>`).join('')}</ul>`;
+  <ul class="rowlist">${rows.map(({ d, o }, n) => `${runHead(d, rows[n - 1], h => `<li class="grp">${h}</li>`)}<li><a href="#order/${o.id}">${av(custOf(o).name, 'md')}<span><strong>${esc(custOf(o).name)}</strong><small>${d.id}, #${o.id}. ${itemsLine(d.lines)}</small></span><span class="r"><span class="num">${fmt(d.date)}</span><small class="muted">${d.method === 'pickup' ? 'Picked up' : esc(d.carrier || 'Courier')}</small></span></a></li>`).join('')}</ul>`;
 }
 function dispatchPage(tab) {
   tab = DSP_TABS.some(t => t[0] === tab) ? tab : 'todo';
   const D = dispatchData();
+  [...dspSel].forEach(id => { if (!D.todo.some(x => x.o.id === id && x.o.delivery && x.o.delivery.method === 'courier')) dspSel.delete(id); });
   const units = sum(D.todo.flatMap(x => x.c.fulfillable.map(i => i.qty)));
   const outOn = test => sum(D.done.filter(d => test(dayDiff(d.date))).flatMap(d => d.lines.map(l => l.qty)));
   const n = { todo: D.todo.length, hold: D.hold.length, done: D.done.length };
@@ -1733,17 +1768,29 @@ function statusBody(o, { preview = false } = {}) {
   const shippedOn = allShipped ? bs.map(b => b.shippedOn).sort().pop() : null;
   const arrivedOn = c.missing.length === 0 ? c.items.map(i => i.receivedOn).filter(Boolean).sort().pop() || null : null;
   const pickup = o.delivery && o.delivery.method === 'pickup';
+  /* What has left the warehouse. A courier dispatch reads "on its way", never "delivered": the app can't know when the courier hands it over. */
+  const ds = S.dispatches.filter(d => d.orderId === o.id).sort((a, b) => toMs(a.date) - toMs(b.date) || digits(a.id) - digits(b.id));
+  const dOf = i => ds.find(d => d.id === i.dispatchId);
+  const gone = c.items.filter(i => i.handedOver), partGone = gone.length > 0 && !c.delivered;
+  const lastD = ds[ds.length - 1];
+  const sentBy = d => `${esc(d.carrier || 'courier')}${d.track ? `, tracking number ${esc(d.track)}` : ''}`;
   const steps = [
     ['Ordered', fmt(o.created), true],
     ['Shipped', shippedOn ? fmt(shippedOn) : '', !!shippedOn],
     ['Arrived in Lagos', arrivedOn ? fmt(arrivedOn) : '', !!arrivedOn || c.delivered],
     [pickup ? 'Ready for pickup' : 'Ready', '', c.ready || c.delivered],
-    [pickup ? 'Picked up' : 'Delivered', c.delivered ? fmt(o.deliveredOn) : '', c.delivered],
+    [pickup ? 'Picked up' : 'Sent to you', c.delivered ? fmt(o.deliveredOn) : '', c.delivered],
   ];
   const doneN = steps.filter(s => s[2]).length;
   const late = c.missing.filter(i => i.b.status !== 'open').map(i => i.b.eta).filter(Boolean).sort().pop();
   let h, lead;
-  if (c.delivered) { h = pickup ? 'Your order has been picked up' : 'Your order has been delivered'; lead = `Completed on ${fmtY(o.deliveredOn)}. Thank you for ordering with ${STORE.name}.`; }
+  if (c.delivered && pickup) { h = 'Your order has been picked up'; lead = `Completed on ${fmtY(o.deliveredOn)}. Thank you for ordering with ${STORE.name}.`; }
+  else if (c.delivered) { h = 'Your order is on its way to you'; lead = `${ds.length > 1 ? 'The last parcel was sent' : 'Sent'} on ${fmtY(o.deliveredOn)}${lastD ? ` with ${sentBy(lastD)}` : ''}. The courier will call before they arrive.`; }
+  else if (partGone) {
+    const rest = c.missing.length ? `The rest is ${late ? `expected in Lagos around ${fmtY(late)}` : 'still on its way to Lagos'}.` : c.ready ? (pickup ? 'The rest is ready for you to collect.' : 'The rest is in Lagos and will follow.') : 'The rest is in Lagos.';
+    h = lastD && lastD.method === 'pickup' ? 'Part of your order has been picked up' : 'Part of your order is on its way to you';
+    lead = `${lastD && lastD.method === 'pickup' ? `You collected ${andList(gone.map(i => 'the ' + lc(i.p.name)))}` : `We sent ${andList(gone.map(i => 'the ' + lc(i.p.name)))}${lastD ? ` with ${sentBy(lastD)}` : ''}`}. ${rest}`;
+  }
   else if (c.ready) { h = pickup ? 'Your order is ready for pickup' : 'Your order is ready for delivery'; lead = pickup ? `Collect it from our ${STORE.hub}, Monday to Saturday, 10am to 6pm.` : `We’re booking a courier to ${esc(placeOf(cu.area))}. They’ll call before they arrive.`; }
   else if (!c.missing.length) { h = 'Your order has arrived in Lagos'; lead = !c.shipKnown ? 'We’re working out shipping costs. We’ll message you with your final balance.' : !o.delivery ? 'Choose pickup or delivery to see your final balance.' : 'Pay your balance and we’ll get it to you.'; }
   else if (c.items.some(i => i.here && !i.handedOver)) { h = 'Part of your order has arrived'; lead = `We’ll keep it safe in Lagos until the rest arrives${late ? `, expected ${fmtY(late)}` : ''}, so everything comes to you together.`; }
@@ -1773,9 +1820,19 @@ function statusBody(o, { preview = false } = {}) {
   c.items.filter(i => i.receivedOn).forEach(i => { (arrivals[i.receivedOn] = arrivals[i.receivedOn] || []).push(i); });
   const inOne = Object.keys(arrivals).length === 1 && !c.missing.length;
   Object.entries(arrivals).forEach(([d, is]) => ev.push({ date: d, text: inOne ? 'Arrived in Lagos' : `${andList(is.map(i => i.p.name))} arrived in Lagos` }));
-  const mixed = !c.delivered && c.items.some(i => i.here) && c.missing.length > 0;
-  const itemState = i => i.handedOver ? (pickup ? 'Picked up' : 'Delivered') : i.here ? `In Lagos since ${fmt(i.receivedOn)}` : i.b.status === 'open' ? `Ships after ${fmt(i.b.closesOn)}` : i.b.eta ? `Expected ${fmt(i.b.eta)}` : 'On its way';
-  if (o.deliveredOn) ev.push({ date: o.deliveredOn, text: pickup ? 'Picked up' : 'Delivered' });
+  const mixed = !c.delivered && (partGone || (c.items.some(i => i.here) && c.missing.length > 0));
+  const goneText = i => { const d = dOf(i); return d && d.method === 'pickup' ? `Picked up ${fmt(d.date)}` : d ? `Sent ${fmt(d.date)}` : pickup ? 'Picked up' : 'Sent'; };
+  const itemState = i => i.handedOver ? goneText(i) : i.here ? `In Lagos since ${fmt(i.receivedOn)}` : i.b.status === 'open' ? `Ships after ${fmt(i.b.closesOn)}` : i.b.eta ? `Expected ${fmt(i.b.eta)}` : 'On its way';
+  /* One update per dispatch, naming the items unless the whole order went at once */
+  ds.forEach(d => { const names = ds.length === 1 && c.delivered ? '' : andList(d.lines.map(l => P(l.sku).name));
+    ev.push({ date: d.date, text: d.method === 'pickup' ? (names ? `${names} picked up` : 'Picked up') : `${names ? `${names} sent` : 'Sent'} with ${d.carrier || 'courier'}${d.track ? `, tracking number ${d.track}` : ''}` }); });
+  if (!ds.length && o.deliveredOn) ev.push({ date: o.deliveredOn, text: pickup ? 'Picked up' : 'Sent to you' });
+  /* A card per parcel (Shop tracking card: carrier, tracking number, the items in it; H&M "Package 1") */
+  const parcels = ds.filter(d => d.method !== 'pickup');
+  const parcelBlock = parcels.map((d, n) => `<div class="pcard"><span class="label">${parcels.length > 1 ? `Parcel ${n + 1} of ${parcels.length}, sent` : 'Sent'} ${fmtY(d.date)}</span>
+      <p style="font-weight:600;margin-top:2px">${esc(d.carrier || 'Courier')}</p>
+      <p class="muted">${d.track ? `Tracking number <strong style="color:var(--ink);font-weight:500">${esc(d.track)}</strong>` : 'No tracking number for this delivery. The courier will call you.'}</p>
+      <p class="muted" style="margin-top:6px">${d.lines.map(l => `${esc(P(l.sku).name)}${l.qty > 1 ? ` × ${l.qty}` : ''}`).join(', ')}. To ${esc(placeOf(cu.area))}</p></div>`).join('');
   ev.sort((a, b) => toMs(b.date) - toMs(a.date));
   return `<div class="pub">
     <p class="pub-store">${STORE.name}</p>
@@ -1783,6 +1840,7 @@ function statusBody(o, { preview = false } = {}) {
     <h1>${h}</h1>
     <p class="lead">${lead}</p>
     <div class="pcard"><div class="stepper-h"><i class="fill" style="width:${(doneN - 1) * 20}%"></i>${steps.map((s, n) => `<div class="step ${s[2] ? 'done' : ''} ${n === doneN - 1 ? 'now' : ''}"><i></i>${s[0]}${s[1] ? `<small>${s[1]}</small>` : ''}</div>`).join('')}</div></div>
+    ${parcelBlock}
     ${methodBlock}
     ${payBlock}
     <div class="pcard"><h3>Order summary</h3>${c.items.map(i => `<div class="pline">${thumb(i.p)}<div><div class="ln">${esc(i.p.name)}${i.qty > 1 ? ` × ${i.qty}` : ''}</div><div class="ls">${esc(i.p.variant || '')}${mixed ? `${i.p.variant ? '. ' : ''}${itemState(i)}` : ''}</div></div><div class="lt">${naira(i.price * i.qty)}</div></div>`).join('')}
@@ -2147,6 +2205,50 @@ function adjustModal(sku) {
         closeModal(); toast(`Spare stock updated. ${plural(stockOf(sku).onHand, 'unit')} on hand`);
       });
       upd();
+    },
+  });
+}
+/* Several orders in one courier run (Shopify "Create shipping labels": the ticked orders listed, one carrier for the set).
+   Each order still gets its own dispatch; the run ties them to one courier, rider and waybill. */
+function runModal() {
+  const rows = [...dspSel].map(orderById).filter(Boolean).map(o => ({ o, c: calc(o), cu: custOf(o) })).filter(x => x.c.fulfillable.length);
+  if (rows.length < 2) return;
+  const units = sum(rows.flatMap(x => x.c.fulfillable.map(i => i.qty)));
+  const before = warehouseUnits();
+  const areas = [...new Set(rows.map(x => placeOf(x.cu.area)))];
+  openModal({
+    title: `Dispatch ${rows.length} orders together`,
+    body: () => `<p>One courier takes all of these. Each order keeps its own dispatch record, and they share the run’s courier and waybill.</p>
+      <div style="margin-bottom:12px">${rows.map(({ o, c, cu }) => `<div class="dline">${av(cu.name, 'md')}<div><div class="ln">${esc(cu.name)} <span class="muted" style="font-weight:400">#${o.id}</span></div><div class="ls">${itemsLine(c.fulfillable)}. Shelf ${c.fulfillable.map(i => i.shelf).filter(Boolean).join(', ') || 'not set'}. To ${esc(placeOf(cu.area))}</div></div><div class="num">× ${sum(c.fulfillable.map(i => i.qty))}</div></div>`).join('')}</div>
+      <div class="grid2">
+        <div class="field"><label for="rn-carrier">Courier</label><select id="rn-carrier">${CARRIERS.map(x => `<option>${x}</option>`).join('')}</select></div>
+        <div class="field"><label for="rn-rider">Rider or driver <span class="opt-l">(optional)</span></label><input id="rn-rider" autocomplete="off" placeholder="Name or phone"></div>
+      </div>
+      <div class="field"><label for="rn-track">Waybill or tracking number <span class="opt-l">(optional)</span></label><input id="rn-track" autocomplete="off"></div>
+      ${areas.length > 1 ? `<p class="help" style="margin:-4px 0 8px">These orders go to ${areas.length} areas: ${esc(andList(areas))}.</p>` : ''}
+      <label class="check"><input type="checkbox" id="rn-notify" checked> Send a notification to each customer</label>`,
+    foot: () => `<span class="left">Leaves ${plural(before - units, 'unit')} in the warehouse</span>${cancelBtn}<button class="btn primary" id="rn-go">Dispatch ${plural(rows.length, 'order')}</button>`,
+    mount(el) {
+      $('#rn-go', el).addEventListener('click', () => {
+        const carrier = $('#rn-carrier', el).value, rider = $('#rn-rider', el).value.trim(), track = $('#rn-track', el).value.trim(), notify = $('#rn-notify', el).checked;
+        let run;
+        commit(() => {
+          run = { id: 'R' + (++S.rseq), date: TODAY, carrier, rider, track };
+          S.runs.push(run);
+          rows.forEach(({ o, c }) => {
+            const d = { id: 'D' + (++S.dseq), date: TODAY, orderId: o.id, method: 'courier', carrier, track, runId: run.id, lines: c.fulfillable.map(i => ({ sku: i.sku, qty: i.qty, shelf: i.shelf || null, batchId: i.batchId })) };
+            S.dispatches.push(d);
+            c.fulfillable.forEach(i => { const it = o.items[c.items.indexOf(i)]; it.handedOver = true; it.dispatchId = d.id; });
+            const names = andList(c.fulfillable.map(i => i.p.name));
+            logTo(o, `${names} dispatched by courier (${carrier}${track ? `, waybill ${track}` : ''}, ${d.id}, courier run ${run.id} with ${plural(rows.length - 1, 'other order')})`);
+            if (notify) logTo(o, 'Dispatch notification sent on WhatsApp');
+            if (o.items.every(i => i.handedOver)) o.deliveredOn = TODAY;
+            if (o.shopify) { const whole = o.items.every(i => i.handedOver); logTo(o, `${whole ? 'Order' : names} marked as fulfilled in Shopify. Shopify didn’t email the customer`); shopLog(`Order #${o.id} ${whole ? '' : 'partly '}marked as fulfilled in Shopify`); }
+          });
+          dspSel.clear();
+        });
+        closeModal(); toast(`Courier run ${run.id}: ${plural(rows.length, 'order')} dispatched. ${plural(warehouseUnits(), 'unit')} left in the warehouse`, { href: '#dispatch?tab=done', label: 'View run' });
+      });
     },
   });
 }
@@ -2896,6 +2998,8 @@ const ACT = {
   'receive': el => receiveModal(batchById(el.dataset.id)),
   'freight': el => freightModal(batchById(el.dataset.id)),
   'adjust': el => adjustModal(el.dataset.id),
+  'run': () => runModal(),
+  'dsel-clear': () => { dspSel.clear(); render(); },
   'change-customer': el => {
     closeMenus();
     const o = orderById(el.dataset.id);
@@ -2975,6 +3079,20 @@ document.addEventListener('click', e => {
   const row = e.target.closest('[data-href]');
   if (row && !e.target.closest('a,button,input,label')) location.hash = row.dataset.href;
 });
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (!t.matches || !t.matches('[data-dsel],[data-dall]')) return;
+  if (t.matches('[data-dall]')) { $$('[data-dsel]').forEach(b => { if (t.checked) dspSel.add(b.dataset.dsel); else dspSel.delete(b.dataset.dsel); }); }
+  else if (t.checked) dspSel.add(t.dataset.dsel); else dspSel.delete(t.dataset.dsel);
+  syncDsel();
+});
+/* The table and the phone list each have a box per order: keep both, the select-all box and the bar in step */
+function syncDsel() {
+  const boxes = $$('[data-dsel]'), all = $('[data-dall]'), ids = new Set(boxes.map(b => b.dataset.dsel));
+  boxes.forEach(b => { b.checked = dspSel.has(b.dataset.dsel); });
+  if (all) { const on = [...ids].filter(id => dspSel.has(id)).length; all.checked = on > 0 && on === ids.size; all.indeterminate = on > 0 && on < ids.size; }
+  const bar = $('#dbulk'); if (bar) bar.innerHTML = bulkBar();
+}
 document.addEventListener('submit', e => {
   const f = e.target.closest('[data-note]'); if (!f) return;
   e.preventDefault();
@@ -3097,7 +3215,7 @@ function render() {
   $('#newmenu').innerHTML = `<a href="#orders/new">${ic('orders')}New order</a><a href="#batches/new">${ic('batches')}New batch</a><hr><button data-act="add-product">${ic('box')}Add product</button><button data-act="add-customer">${ic('customers')}Add customer</button>`;
   if (parts[0] === 'orders') { const oq = $('#oq'); oq.addEventListener('input', () => { orderQuery = oq.value; $('#orows').innerHTML = orderRows($('#orows').dataset.tab); }); }
   if (parts[0] === 'inventory' && !parts[1]) { const iq = $('#iq'); iq.addEventListener('input', () => { invQuery = iq.value; $('#irows').innerHTML = invRows($('#irows').dataset.tab); }); }
-  if (parts[0] === 'dispatch') { const dq = $('#dq'); dq.addEventListener('input', () => { dspQuery = dq.value; $('#drows').innerHTML = dspRows($('#drows').dataset.tab); }); }
+  if (parts[0] === 'dispatch') { const dq = $('#dq'); dq.addEventListener('input', () => { dspQuery = dq.value; $('#drows').innerHTML = dspRows($('#drows').dataset.tab); syncDsel(); }); syncDsel(); }
   document.title = 'PreorderDesk';
 }
 window.addEventListener('hashchange', () => { if (modal) closeModal(); render(); window.scrollTo(0, 0); });
