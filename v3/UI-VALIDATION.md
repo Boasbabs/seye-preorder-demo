@@ -253,6 +253,17 @@ Every Get Started button opens a WhatsApp chat with a ready message, because fir
 1. The forwarding of old dashboard links from the root to `app/`. That's plumbing, not a screen.
 2. Icons instead of photos of sellers in "Who it's for". The brief asked for photos of Nigerian sellers, and no licensed photos were available.
 
+## v3: dates that have passed, and the Shopify label
+
+Added 26 November 2026. No new screens or components. These are wording and state fixes on existing pills, to-do rows and the sidebar.
+
+- **A batch past its closing date.** The storefront already stopped offering a batch on its closing date, while the dashboard kept saying "Taking orders" and "Closes today". Now the batch pill reads "Past closing date" in amber (Seye's move), the sidebar says the same, the to-do says the storefront stopped and asks her to close orders, and the Batches "Taking orders" total leaves it out. Staff can still add late orders to it, and the pickers say "closing date was 14 Nov".
+- **A batch or shipment past its expected date.** "Expected 16 Nov" after 16 Nov now reads "Was due 16 Nov". On the customer's order page a passed date is never shown as expected. It says "Running late" or "It's taking longer than expected".
+- **Sample dates move with the calendar.** The sample data remembers the day its dates were lined up with, and each later day moves every saved date forward by the same amount, so "sent 3 days ago" stays 3 days ago. Data saved before this change can't be moved safely, because its parts were added on different days. If it is more than a day old, the sidebar says "These sample dates are old. Reset brings them up to today."
+- **Shopify.** The green "Connected" pill became a grey "Simulated" pill, and the line under the title says the page isn't connected to the real store and the orders are samples.
+
+**Not backed by a direct reference.** The "Past closing date" pill and "Was due" wording follow the usual overdue status on invoices and tasks; I didn't search Mobbin for a batch or campaign screen past its end date.
+
 ## v3: still not backed by a direct reference
 
 1. The duplicate-number warning with "Use Amaka". It's a common pattern, but I didn't find it on Mobbin.

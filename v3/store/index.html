@@ -170,7 +170,21 @@ const pic = (g, big) => g.image ? `<img src="${esc(big ? bigImg(g.image) : g.ima
 
 /* ---------- Shared data: the dashboard and the storefront read and write the same saved state ---------- */
 let S = null;
-const read = () => { try { const s = JSON.parse(localStorage.getItem(KEY)); return s && s.v === 3 ? s : null; } catch (e) { return null; } };
+const read = () => { try { const s = JSON.parse(localStorage.getItem(KEY)); if (!s || s.v !== 3) return null; freshen(s); return s; } catch (e) { return null; } };
+/* Sample dates move forward with the calendar, the same rule as the dashboard's freshen(): asOf is the day they were last lined up with */
+function shiftDates(x, n) {
+  if (Array.isArray(x)) return x.map(v => shiftDates(v, n));
+  if (x && typeof x === 'object') { Object.keys(x).forEach(k => { x[k] = shiftDates(x[k], n); }); return x; }
+  if (typeof x !== 'string' || !/^\d{4}-\d{2}-\d{2}(T|$)/.test(x)) return x;
+  if (x.length === 10) { const [y, m, d] = x.split('-').map(Number); return iso(new Date(y, m - 1, d + n).getTime()); }
+  const t = new Date(x); if (isNaN(t)) return x;
+  t.setDate(t.getDate() + n); return t.toISOString();
+}
+function freshen(s) {
+  if (!s.asOf || s.asOf >= TODAY) return;
+  shiftDates(s, Math.round((T0 - toMs(s.asOf)) / DAY)); s.asOf = TODAY;
+  try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) { /* kept in memory */ }
+}
 const shop = () => ({ slug: 'preorder-with-seye', name: 'Preorder with Seye', hub: 'Lekki hub', owner: 'Seye', depositPct: 70, on: true, hidden: [], ...((S && S.storefront) || {}) });
 /* What can be preordered: products in batches taking orders, grouped by name so colours and sizes are options of one product */
 function catalog() {

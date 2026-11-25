@@ -61,8 +61,10 @@ h1,h2,h3,p{margin:0}
 .nav.bm a .ic{margin-top:2px}
 .nav.bm small{display:block;font-size:12px;font-weight:400;color:var(--ink-2);line-height:1.35}
 /* Pinned last row (Stripe's Developers row) */
-.side-foot{margin:auto -10px 0;border-top:1px solid var(--line-2);padding:12px 18px 14px;display:flex;align-items:flex-start;gap:12px;font-size:13px;line-height:1.4;color:var(--ink)}
+.side-foot{margin:auto -10px 0;border-top:1px solid var(--line-2);padding:12px 18px 14px;display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px;font-size:13px;line-height:1.4;color:var(--ink)}
 .side-foot small{display:block;font-size:12px;color:var(--ink-3)}
+.side-foot>span:first-child{flex:1 1 0;min-width:0}
+.side-foot small.old{flex-basis:100%;margin-top:-4px;color:var(--amber)}
 .side-foot .link{margin-left:auto;font-size:12px}
 .side-foot .links{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 .side-foot .links .link{margin:0;white-space:nowrap}
@@ -733,7 +735,7 @@ function seed() {
   const products = {};
   Object.entries(SP).forEach(([id, p], n) => { products[id] = { id, ...p, image: null, createdOn: rel(-140 + n) }; });
   const s = {
-    v: 3, seq: 1052, products, customers: [], orders: [],
+    v: 3, asOf: TODAY, seq: 1052, products, customers: [], orders: [],
     batches: [
       { id: 'MAY', name: 'May batch', ref: 'SHP-2605', from: 'Ningbo', status: 'received', createdOn: rel(-112), closesOn: rel(-95), shippedOn: rel(-88), eta: rel(-21), receivedOn: rel(-21), ratePerKg: 2800, cost: null, spareKg: 48, spareUnits: 16, spareBy: { KB04: 16 }, shelf: 'A', lineup: ['KB04'], log: [],
         deliveries: [{ id: 'd1', date: rel(-21), spare: 16, spareBy: { KB04: 16 } }] },
@@ -863,7 +865,24 @@ function deliveryText(n, lines, spare, left, eta) {
 }
 
 /* ---------- State ---------- */
-function load() { try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 3) return s; } catch (e) { /* use seed */ } return seed(); }
+function load() { try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 3) { if (freshen(s)) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) { /* kept in memory */ } } return s; } } catch (e) { /* use seed */ } return seed(); }
+/* Sample data keeps its age. asOf is the day its dates were last lined up with; on a later day every saved date moves
+   forward by the same number of days, so a deposit paid "3 days ago" stays 3 days ago. Moves anything typed in too. */
+function shiftDates(x, n) {
+  if (Array.isArray(x)) return x.map(v => shiftDates(v, n));
+  if (x && typeof x === 'object') { Object.keys(x).forEach(k => { x[k] = shiftDates(x[k], n); }); return x; }
+  if (typeof x !== 'string' || !/^\d{4}-\d{2}-\d{2}(T|$)/.test(x)) return x;
+  if (x.length === 10) { const [y, m, d] = x.split('-').map(Number); return iso(new Date(y, m - 1, d + n).getTime()); }
+  const t = new Date(x); if (isNaN(t)) return x;
+  t.setDate(t.getDate() + n); return t.toISOString();
+}
+function freshen(s) {
+  /* Saved before dates moved: parts were added on different days, so shifting would break them. Start from today and flag old ones. */
+  if (!s.asOf) { const p = s.products && s.products.CI07; s.asOf = TODAY; if (p && p.createdOn && dayDiff(p.createdOn) <= -142) s.oldDates = true; return true; }
+  const n = -dayDiff(s.asOf);
+  if (n <= 0) return false;
+  shiftDates(s, n); s.asOf = TODAY; return true;
+}
 /* Data saved before batches could arrive in parts: a received batch becomes one delivery that brought everything */
 function ensureDeliveries() {
   let changed = false;
@@ -887,6 +906,12 @@ const custById = id => S.customers.find(c => c.id === id);
 const custOf = o => custById(o.customerId);
 const ordersIn = b => S.orders.filter(o => o.items.some(i => i.batchId === b.id));
 const openBatches = () => S.batches.filter(b => b.status === 'open').sort((a, b) => toMs(a.closesOn) - toMs(b.closesOn));
+/* Past its closing date: the storefront stopped taking preorders that day, but Seye hasn't closed orders yet, so staff can still add late ones */
+const pastClose = b => b.status === 'open' && b.closesOn < TODAY;
+const takingBatches = () => openBatches().filter(b => !pastClose(b));
+const untilText = b => pastClose(b) ? `closing date was ${fmt(b.closesOn)}` : `taking orders until ${fmt(b.closesOn)}`;
+const dueText = eta => dayDiff(eta) < 0 ? `was due ${fmt(eta)}` : `expected ${fmt(eta)}`;
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 const placeOf = area => { if (!area) return 'Location not given'; const a = AREAS[area]; if (!a) return area;return (a[0] === area || a[0] === 'Rivers') ? area : `${area}, ${a[0]}`; };
 const feeFor = area => (AREAS[area] || [null, 7500])[1];
 const statusUrl = id => location.origin + location.pathname + '#status/' + id;
@@ -948,14 +973,14 @@ const nextRef = () => 'SHP-' + (Math.max(2600, ...S.batches.map(b => digits(b.re
 const normPhone = s => { let d = digitStr(s); if (d.startsWith('234')) d = d.slice(3); if (d.startsWith('0')) d = d.slice(1); return d; };
 const fmtPhone = d => `+234 ${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}`.trim();
 const BATCH_PILL = { open: ['Taking orders', 'blue'], buying: ['Orders closed', ''], transit: ['In transit', 'blue'], partial: ['Partially received', 'blue'], received: ['Received', 'green'], closed: ['Closed', ''] };
-const batchPill = b => pill(...BATCH_PILL[b.status]);
+const batchPill = b => pastClose(b) ? pill('Past closing date', 'amber') : pill(...BATCH_PILL[b.status]);
 function batchWhen(b) {
-  if (b.status === 'open') return `taking orders until ${fmt(b.closesOn)}`;
+  if (b.status === 'open') return untilText(b);
   if (b.status === 'buying') return 'orders closed, buying from suppliers';
   if (b.status === 'transit' && !b.eta) return 'on the way';
-  if (b.status === 'transit') return `in transit, expected ${fmt(b.eta)}`;
+  if (b.status === 'transit') return `in transit, ${dueText(b.eta)}`;
   if (b.status === 'partial' && b.supply && !b.eta) { const n = sum(batchLines(b).filter(x => !x.i.po && !x.i.receivedOn && !x.i.handedOver).map(x => x.i.qty)); if (n) return `partially received, ${plural(n, 'unit')} to buy again`; }
-  if (b.status === 'partial') return `partially received, the rest expected ${b.eta ? fmt(b.eta) : 'soon'}`;
+  if (b.status === 'partial') return `partially received, the rest ${b.eta ? dueText(b.eta) : 'expected soon'}`;
   return `received ${fmt(b.receivedOn)}`;
 }
 
@@ -1029,15 +1054,18 @@ function todos() {
       ? `${batchGot(b)} of ${batchTotal(b)} units arrived, the last ${ago(lastDelivery(b).date)}. ${plural(waiting, 'customer')} with items in Lagos ${waiting === 1 ? 'is' : 'are'} waiting for their final balance.`
       : `Received ${ago(b.receivedOn)}. ${plural(ordersIn(b).length, 'customer')} are waiting for their final balance.` });
   });
-  S.batches.filter(b => !b.supply && onTheWay(b) && b.eta && dayDiff(b.eta) <= 1).forEach(b => T.push({ icon: 'ship', tone: 'blue', href: `#batch/${b.id}`, title: b.status === 'partial' ? `Receive the rest of the ${b.name}` : `Receive the ${b.name}`, sub: b.status === 'partial' ? `${plural(batchLeft(b), 'unit')} still to come, expected ${fmt(b.eta)}.` : `Expected ${fmt(b.eta)}.` }));
+  S.batches.filter(b => !b.supply && onTheWay(b) && b.eta && dayDiff(b.eta) <= 1).forEach(b => T.push({ icon: 'ship', tone: 'blue', href: `#batch/${b.id}`, title: b.status === 'partial' ? `Receive the rest of the ${b.name}` : `Receive the ${b.name}`, sub: b.status === 'partial' ? `${plural(batchLeft(b), 'unit')} still to come, ${dueText(b.eta)}.` : `${cap(dueText(b.eta))}.` }));
   all.filter(x => !x.c.claim && x.c.final && x.c.owed > 0 && !x.c.delivered && (!x.o.remindedOn || dayDiff(x.o.remindedOn) <= -3)).forEach(({ o, c, cu }) => T.push({ icon: 'chat', tone: 'red', href: `#order/${o.id}`, title: `${esc(cu.name)} has a ${naira(c.owed)} balance`, sub: o.remindedOn ? `Last reminder sent ${ago(o.remindedOn)}.` : 'No reminder sent yet.' }));
   const noMethod = all.filter(x => x.c.reasons.some(r => r.key === 'delivery') && x.o.remindedOn && dayDiff(x.o.remindedOn) <= -2);
   if (noMethod.length) T.push({ icon: 'truck', tone: 'amber', href: '#orders?tab=hold', title: `${plural(noMethod.length, 'customer')} haven’t chosen a delivery method`, sub: andList(noMethod.map(x => esc(x.cu.name))) });
   openBatches().filter(b => dayDiff(b.closesOn) <= 7).forEach(b => {
     const os = ordersIn(b);
-    T.push({ icon: 'calendar', tone: 'blue', href: `#batch/${b.id}`, title: dayDiff(b.closesOn) <= 0 ? `The ${b.name} closes today` : `The ${b.name} closes ${dayDiff(b.closesOn) === 1 ? 'tomorrow' : `in ${dayDiff(b.closesOn)} days`}`, sub: `${plural(os.length, 'order')}, ${naira(sum(os.map(o => calc(o).paid)))} in deposits. ${b.supply ? 'Close orders, then raise purchase orders from the buy list.' : 'Mark it as in transit once you order from the supplier.'}` });
+    const n = dayDiff(b.closesOn), next = b.supply ? 'Close orders, then raise purchase orders from the buy list.' : 'Mark it as in transit once you order from the supplier.';
+    T.push({ icon: 'calendar', tone: n < 0 ? 'amber' : 'blue', href: `#batch/${b.id}`,
+      title: n < 0 ? `The ${b.name}’s closing date has passed` : n === 0 ? `The ${b.name} closes today` : `The ${b.name} closes ${n === 1 ? 'tomorrow' : `in ${n} days`}`,
+      sub: `${n < 0 ? `The storefront stopped taking preorders on ${fmt(b.closesOn)}. ` : ''}${plural(os.length, 'order')}, ${naira(sum(os.map(o => calc(o).paid)))} in deposits. ${next}` });
   });
-  if (!openBatches().length) T.push({ icon: 'batches', tone: 'blue', href: '#batches/new', title: 'No batch is taking orders', sub: 'Create a batch so customers can keep preordering.' });
+  if (!takingBatches().length) T.push({ icon: 'batches', tone: 'blue', href: '#batches/new', title: 'No batch is taking orders', sub: 'Create a batch so customers can keep preordering.' });
   return T;
 }
 
@@ -1050,7 +1078,7 @@ function supplyTodos(T, all) {
   S.pos.filter(p => p.placedOn).forEach(p => { const F = poFacts(p); if (F.unpaid > 0.005) T.push({ icon: 'money', tone: 'amber', href: `#po/${p.id}`, title: `Pay ${yuan(F.unpaid)} to ${esc(supName(p.supplierId))}`, sub: `${p.id}, ${F.pay[0].toLowerCase()}. Record it once it’s sent, direct or through your agent.` }); });
   S.ships.forEach(sh => { const f = shipFacts(sh);
     if (f.status === 'collecting' && f.units) T.push({ icon: 'ship', tone: 'blue', href: `#shipment/${sh.id}`, title: `${sh.id} is collecting at the forwarder`, sub: `${plural(f.units, 'unit')} so far. Mark it as departed when it leaves China.` });
-    if (sh.departedOn && f.left && sh.eta && dayDiff(sh.eta) <= 1) T.push({ icon: 'ship', tone: 'blue', href: `#shipment/${sh.id}`, title: f.got ? `${plural(f.left, 'unit')} of ${sh.id} still to come` : `Receive ${sh.id}`, sub: f.got ? `Expected ${fmt(sh.eta)}. Receive them, or record a shortage if they won’t come.` : `Expected ${fmt(sh.eta)}. ${plural(f.units, 'unit')} on board.` });
+    if (sh.departedOn && f.left && sh.eta && dayDiff(sh.eta) <= 1) T.push({ icon: 'ship', tone: 'blue', href: `#shipment/${sh.id}`, title: f.got ? `${plural(f.left, 'unit')} of ${sh.id} still to come` : `Receive ${sh.id}`, sub: f.got ? `${cap(dueText(sh.eta))}. Receive them, or record a shortage if they won’t come.` : `${cap(dueText(sh.eta))}. ${plural(f.units, 'unit')} on board.` });
     if (f.got && !f.cost) { const n = new Set(onShip(sh).filter(x => x.i.receivedOn && !x.i.handedOver).map(x => x.o.id)).size;
       T.push({ icon: 'money', tone: 'amber', href: `#shipment/${sh.id}`, title: `Add ${sh.id}’s freight and clearing cost`, sub: `${f.got} of ${f.units} units arrived. ${plural(n, 'customer')} with items in Lagos ${n === 1 ? 'is' : 'are'} waiting for their final balance.` }); }
   });
@@ -1149,7 +1177,7 @@ function lineRow(i) {
   if (i.handedOver) where = '';
   else if (i.here) where = `${i.receivedOn ? `Arrived ${fmt(i.receivedOn)}${i.shipId ? ` on ${i.shipId}` : ''}. ` : ''}Shelf ${i.shelf || 'not set'}`;
   else if (isSup(i)) where = stageText(i);
-  else if (i.b.status === 'open') where = `${i.b.name}, taking orders until ${fmt(i.b.closesOn)}`;
+  else if (i.b.status === 'open') where = `${i.b.name}, ${untilText(i.b)}`;
   else if (i.b.status === 'partial') where = `${i.b.name}, in a later delivery${i.b.eta ? `, expected ${fmt(i.b.eta)}` : ''}`;
   else where = `${i.b.name}, expected ${fmt(i.b.eta)}`;
   return `<div class="line">${thumb(i.p)}<div><div class="ln">${esc(i.p.name)}</div><div class="ls">${[esc(i.p.variant), where].filter(Boolean).join('. ')}</div></div><div class="lq">${naira(i.price)} × ${i.qty}</div><div class="lt">${naira(i.price * i.qty)}</div></div>`;
@@ -1263,11 +1291,11 @@ function timelineHTML(log, kind, id) {
 function batchesPage() {
   const order = { received: 0, partial: 1, transit: 2, buying: 3, open: 4, closed: 5 };
   const list = [...S.batches].sort((a, b) => order[a.status] - order[b.status] || toMs(b.createdOn) - toMs(a.createdOn));
-  const rowNote = b => b.status === 'partial' ? `${batchGot(b)} of ${batchTotal(b)} received` : (b.status === 'received' || b.status === 'closed') && b.receivedOn ? `Received ${fmt(b.receivedOn)}` : b.eta && b.status !== 'open' ? `Expected ${fmt(b.eta)}` : `Closes ${fmt(b.closesOn)}`;
+  const rowNote = b => b.status === 'partial' ? `${batchGot(b)} of ${batchTotal(b)} received` : (b.status === 'received' || b.status === 'closed') && b.receivedOn ? `Received ${fmt(b.receivedOn)}` : b.eta && b.status !== 'open' ? cap(dueText(b.eta)) : pastClose(b) ? `Closing date was ${fmt(b.closesOn)}` : `Closes ${fmt(b.closesOn)}`;
   return `<div class="page">
     <div class="ph"><div><h1>Batches</h1><p class="sub">Each batch is one supplier order. It can reach Lagos in several deliveries.</p></div><div class="acts"><a class="btn primary" href="#batches/new">${ic('plus')}New batch</a></div></div>
     <section class="panel overview">
-      <div><span class="label">Taking orders</span><div class="big">${plural(sum(openBatches().map(batchUnits)), 'unit')}</div><span class="muted">${plural(openBatches().length, 'batch', 'batches')} open</span></div>
+      <div><span class="label">Taking orders</span><div class="big">${plural(sum(takingBatches().map(batchUnits)), 'unit')}</div><span class="muted">${plural(takingBatches().length, 'batch', 'batches')} open</span></div>
       <div class="ov-stats three">
         <div title="Units shipped and not yet in Lagos, including spare stock"><span class="label">In transit</span><strong>${plural(unitsInTransit(), 'unit')}</strong></div>
         <a href="#inventory" title="In the warehouse for customers, not yet dispatched"><span class="label">Received, not dispatched</span><strong>${plural(sum(stockAll().map(r => r.s.held)), 'unit')}</strong></a>
@@ -1312,7 +1340,7 @@ function batchPage(id) {
   const still = lines.filter(x => !isIn(x.i));
   const deliveriesHTML = !dl.length ? '' : `<section class="sec">
           <div class="sec-h"><h2>Deliveries <span class="n">${dl.length}</span></h2></div>
-          ${left ? `<div class="group"><div class="group-h">${pill(`Still to come (${left})`)}<span class="muted">${b.eta ? `Expected ${fmtY(b.eta)}` : 'Expected date not set'}</span></div>${still.map(dRow).join('')}${spareRows(spareToCome)}</div>` : ''}
+          ${left ? `<div class="group"><div class="group-h">${pill(`Still to come (${left})`)}<span class="muted">${b.eta ? cap(dueText(b.eta)) : 'Expected date not set'}</span></div>${still.map(dRow).join('')}${spareRows(spareToCome)}</div>` : ''}
           ${[...dl].reverse().map(d => { const mine = lines.filter(x => x.i.dId === d.id); return `<div class="group"><div class="group-h">${pill(`Received (${sum(mine.map(x => x.i.qty)) + d.spare})`, 'green', 'check')}<span class="muted">${d.ship ? `From <a href="#shipment/${d.ship}">${d.ship}</a>` : `Delivery ${dl.indexOf(d) + 1}`}, ${fmtY(d.date)}</span></div>${mine.map(dRow).join('')}${spareRows(d.spareBy)}</div>`; }).join('')}
         </section>`;
   return `<div class="page">
@@ -1353,7 +1381,7 @@ function batchPage(id) {
           <div class="sec-h"><h2>Details</h2></div>
           <ul class="facts">
             ${b.supply ? `<li><div class="fh">Suppliers</div>${[...new Set(batchPOs(b).map(p => p.supplierId))].map(id => `<p>${esc(supName(id))}</p>`).join('') || '<p class="faint">None yet. Raise purchase orders from the buy list</p>'}</li>` : `<li><div class="fh">Ships from</div><p>${esc(b.from)}</p></li>`}
-            <li><div class="fh">${b.ordersClosedOn ? 'Orders closed' : 'Orders close'}</div><p>${fmtY(b.ordersClosedOn || b.closesOn)}</p></li>
+            <li><div class="fh">${b.ordersClosedOn ? 'Orders closed' : pastClose(b) ? 'Closing date passed' : 'Orders close'}</div><p>${fmtY(b.ordersClosedOn || b.closesOn)}</p></li>
             <li><div class="fh">Shipped</div><p>${b.shippedOn ? fmtY(b.shippedOn) : '<span class="faint">Not yet</span>'}</p></li>
             <li><div class="fh">${b.status === 'partial' ? 'The rest expected' : 'Expected in Lagos'}</div><p>${b.eta ? fmtY(b.eta) : '<span class="faint">Not set</span>'}</p></li>
             <li><div class="fh">Received</div><p>${!dl.length ? '<span class="faint">Not yet</span>' : left ? `${got} of ${total} units` : fmtY(b.receivedOn || lastDelivery(b).date)}</p>${dl.length ? `<p class="muted">${dl.length === 1 ? 'In one delivery' : `In ${dl.length} deliveries`}${left ? `, the last on ${fmt(lastDelivery(b).date)}` : ''}</p>` : ''}</li>
@@ -1382,7 +1410,7 @@ function batchSupplyAside(b) {
 function productsPage() {
   const list = Object.values(S.products).sort((a, b) => a.name.localeCompare(b.name));
   const pre = id => sum(S.orders.flatMap(o => o.items.filter(i => i.sku === id && !i.handedOver).map(i => i.qty)));
-  const inBatches = id => openBatches().filter(b => (b.lineup || []).includes(id)).map(b => b.name);
+  const inBatches = id => takingBatches().filter(b => (b.lineup || []).includes(id)).map(b => b.name);
   return `<div class="page">
     <div class="ph"><div><h1>Products</h1><p class="sub">What you sell. Weight is used to split each batch’s freight cost.</p></div><div class="acts"><button class="btn primary" data-act="add-product">${ic('plus')}Add product</button></div></div>
     <div class="tbl-wrap listify"><table class="tbl"><thead><tr><th>Product</th><th class="r">Price</th><th class="r">Supplier cost</th><th class="r">Weight</th><th>Taking orders in</th><th class="r">Preordered</th><th class="r">On hand</th></tr></thead><tbody>
@@ -1627,7 +1655,7 @@ function customerPage(id) {
 
 /* ---------- New order (Stripe "Create invoice" and Mercury invoice editor, with live preview) ---------- */
 let od = null;
-function newOrderDraft() { const ob = openBatches()[0]; return { customerId: null, batchId: ob ? ob.id : null, lines: {}, inc: false, channel: 'Instagram', collect: 'paid', amt: null, method: 'Bank transfer', ref: '', preview: true }; }
+function newOrderDraft() { const ob = takingBatches()[0] || openBatches()[0]; return { customerId: null, batchId: ob ? ob.id : null, lines: {}, inc: false, channel: 'Instagram', collect: 'paid', amt: null, method: 'Bank transfer', ref: '', preview: true }; }
 function oeTotals() {
   const goods = sum(Object.entries(od.lines).map(([k, q]) => P(k).price * q));
   const min = ceil100(goods * MIN_DEPOSIT);
@@ -1644,7 +1672,7 @@ function orderEditor() {
       <div class="ed-form"><div class="ed-in">
         <section class="ed-sec"><h2>Customer</h2><div id="oe-cust"></div></section>
         <section class="ed-sec"><h2>Batch</h2>
-          ${obs.length ? `<div class="field" style="margin:0"><select id="oe-batch" aria-label="Batch">${obs.map(b => `<option value="${b.id}" ${b.id === od.batchId ? 'selected' : ''}>${esc(b.name)}, taking orders until ${fmt(b.closesOn)}</option>`).join('')}</select></div><p class="help">Shipping is added by weight when this batch arrives in Lagos.</p>`
+          ${obs.length ? `<div class="field" style="margin:0"><select id="oe-batch" aria-label="Batch">${obs.map(b => `<option value="${b.id}" ${b.id === od.batchId ? 'selected' : ''}>${esc(b.name)}, ${untilText(b)}</option>`).join('')}</select></div><p class="help">Shipping is added by weight when this batch arrives in Lagos.</p>`
             : `<div class="be-empty">No batch is taking orders. <a href="#batches/new">Create a batch</a> first.</div>`}</section>
         <section class="ed-sec"><h2>Products</h2>
           <div class="combo">${ic('search')}<input id="oe-pq" placeholder="Find or add a product" autocomplete="off" aria-label="Find or add a product" ${od.batchId ? '' : 'disabled'}><div class="combo-pop" id="oe-ppop" hidden></div></div>
@@ -1852,7 +1880,8 @@ function statusBody(o, { preview = false } = {}) {
     [pickup ? 'Picked up' : 'Sent to you', c.delivered ? fmt(o.deliveredOn) : '', c.delivered],
   ];
   const doneN = steps.filter(s => s[2]).length;
-  const late = c.missing.map(itemEta).filter(Boolean).sort().pop();
+  /* A date that has passed is never shown as expected; the page says it is running late instead */
+  const due = c.missing.map(itemEta).filter(Boolean).sort().pop(), overdue = !!due && dayDiff(due) < 0, late = overdue ? null : due;
   let h, lead;
   if (c.delivered && pickup) { h = 'Your order has been picked up'; lead = `Completed on ${fmtY(o.deliveredOn)}. Thank you for ordering with ${STORE.name}.`; }
   else if (c.delivered) { h = 'Your order is on its way to you'; lead = `${ds.length > 1 ? 'The last parcel was sent' : 'Sent'} on ${fmtY(o.deliveredOn)}${lastD ? ` with ${sentBy(lastD)}` : ''}. The courier will call before they arrive.`; }
@@ -1865,9 +1894,9 @@ function statusBody(o, { preview = false } = {}) {
   else if (!c.missing.length) { h = 'Your order has arrived in Lagos'; lead = !c.shipKnown ? 'We’re working out shipping costs. We’ll message you with your final balance.' : !o.delivery ? 'Choose pickup or delivery to see your final balance.' : 'Pay your balance and we’ll get it to you.'; }
   else if (c.items.some(i => i.here && !i.handedOver)) { h = 'Part of your order has arrived'; lead = `We’ll keep it safe in Lagos until the rest arrives${late ? `, expected ${fmtY(late)}` : ''}, so everything comes to you together.`; }
   else if (!sup && allShipped && c.missing.every(i => i.b.status === 'partial')) { h = 'Your order is on its way to Lagos'; lead = `Part of this shipment has already reached Lagos. ${c.missing.length === c.items.length ? 'Your order is' : 'Your items are'} coming in a later delivery${late ? `, expected around ${fmtY(late)}` : ''}.`; }
-  else if (allShipped) { h = 'Your order is on its way to Lagos'; lead = late ? `Expected in Lagos around ${fmtY(late)}.` : 'We’ll tell you when it arrives.'; }
+  else if (allShipped) { h = 'Your order is on its way to Lagos'; lead = late ? `Expected in Lagos around ${fmtY(late)}.` : overdue ? 'It’s taking longer than expected. We’ll tell you when it arrives.' : 'We’ll tell you when it arrives.'; }
   else if (sup && c.missing[0].b.status !== 'open') { h = 'Your order is confirmed'; lead = c.missing.some(i => i.stage === 'lost') ? (c.items.length === 1 ? 'Your order has been delayed. We’ll message you on WhatsApp about it.' : 'One of your items is delayed. We’ll message you on WhatsApp about it.') : c.missing.some(i => i.dep) ? `Part of your order is on its way to Lagos${late ? `, expected around ${fmtY(late)}` : ''}. The rest ships soon.` : 'We’ve ordered it from our suppliers. We’ll tell you when it ships to Lagos. Shipping is worked out by weight when it arrives.'; }
-  else { const b = c.missing[0].b; h = 'Your order is confirmed'; lead = `We’re collecting orders until ${fmtY(b.closesOn)}, then it ships from ${esc(b.from)}. Shipping is worked out by weight when it arrives.`; }
+  else { const b = c.missing[0].b; h = 'Your order is confirmed'; lead = `${pastClose(b) ? `Orders closed on ${fmtY(b.closesOn)}, and it ships from ${esc(b.from)} next` : `We’re collecting orders until ${fmtY(b.closesOn)}, then it ships from ${esc(b.from)}`}. Shipping is worked out by weight when it arrives.`; }
   const needsMethod = !c.missing.length && c.shipKnown && !o.delivery && !c.delivered;
   const fee = feeFor(cu.area);
   const payBlock = c.delivered ? '' : c.claim
@@ -1893,10 +1922,11 @@ function statusBody(o, { preview = false } = {}) {
   c.items.filter(i => i.receivedOn).forEach(i => { (arrivals[i.receivedOn] = arrivals[i.receivedOn] || []).push(i); });
   const inOne = Object.keys(arrivals).length === 1 && !c.missing.length;
   Object.entries(arrivals).forEach(([d, is]) => ev.push({ date: d, text: inOne ? 'Arrived in Lagos' : `${andList(is.map(i => i.p.name))} arrived in Lagos` }));
-  const supState = i => ({ way: i.eta ? `Expected ${fmt(i.eta)}` : 'On its way to Lagos', forwarder: 'With our shipping agent', supplier: 'Ordered from the supplier', draft: 'Being ordered', buy: i.b.status === 'open' ? `Ships after ${fmt(i.b.closesOn)}` : 'Being ordered', lost: 'Delayed, we’ll message you' }[i.stage] || 'On its way');
+  const etaState = d => dayDiff(d) < 0 ? 'Running late' : `Expected ${fmt(d)}`;
+  const supState = i => ({ way: i.eta ? etaState(i.eta) : 'On its way to Lagos', forwarder: 'With our shipping agent', supplier: 'Ordered from the supplier', draft: 'Being ordered', buy: i.b.status === 'open' && !pastClose(i.b) ? `Ships after ${fmt(i.b.closesOn)}` : 'Being ordered', lost: 'Delayed, we’ll message you' }[i.stage] || 'On its way');
   const mixed = !c.delivered && (partGone || (c.items.some(i => i.here) && c.missing.length > 0) || (sup && new Set(c.missing.map(supState)).size > 1));
   const goneText = i => { const d = dOf(i); return d && d.method === 'pickup' ? `Picked up ${fmt(d.date)}` : d ? `Sent ${fmt(d.date)}` : pickup ? 'Picked up' : 'Sent'; };
-  const itemState = i => i.handedOver ? goneText(i) : i.here ? `In Lagos since ${fmt(i.receivedOn)}` : isSup(i) ? supState(i) : i.b.status === 'open' ? `Ships after ${fmt(i.b.closesOn)}` : i.b.eta ? `Expected ${fmt(i.b.eta)}` : 'On its way';
+  const itemState = i => i.handedOver ? goneText(i) : i.here ? `In Lagos since ${fmt(i.receivedOn)}` : isSup(i) ? supState(i) : i.b.status === 'open' ? (pastClose(i.b) ? 'Being ordered' : `Ships after ${fmt(i.b.closesOn)}`) : i.b.eta ? etaState(i.b.eta) : 'On its way';
   /* One update per dispatch, naming the items unless the whole order went at once */
   ds.forEach(d => { const names = ds.length === 1 && c.delivered ? '' : andList(d.lines.map(l => P(l.sku).name));
     ev.push({ date: d.date, text: d.method === 'pickup' ? (names ? `${names} picked up` : 'Picked up') : `${names ? `${names} sent` : 'Sent'} with ${d.carrier || 'courier'}${d.track ? `, tracking number ${d.track}` : ''}` }); });
@@ -2006,7 +2036,7 @@ function productDrawer({ id = null, name = '', batchId = null, hideBatch = false
       </div>
       <div class="field"><label for="pd-kg">Weight per unit <span class="req">(required)</span></label><div class="input-post" style="max-width:200px"><input id="pd-kg" inputmode="decimal" autocomplete="off" value="${esc(L.kg)}"><span>kg</span></div><p class="help">Used to split each batch’s freight and clearing cost.</p>
         ${sibs.length ? `<label class="check"><input type="checkbox" id="pd-sib" checked> Use this weight for the other ${plural(sibs.length, 'variant')} of ${esc(p.name)} too</label>` : ''}</div>
-      ${showBatch ? `<div class="field"><label for="pd-batch">Add to batch</label><select id="pd-batch"><option value="">Not now</option>${obs.map(b => `<option value="${b.id}" ${b.id === L.batch ? 'selected' : ''}>${esc(b.name)}, taking orders until ${fmt(b.closesOn)}</option>`).join('')}</select><p class="help">Customers can preorder it in that batch.</p></div>` : ''}
+      ${showBatch ? `<div class="field"><label for="pd-batch">Add to batch</label><select id="pd-batch"><option value="">Not now</option>${obs.map(b => `<option value="${b.id}" ${b.id === L.batch ? 'selected' : ''}>${esc(b.name)}, ${untilText(b)}</option>`).join('')}</select><p class="help">Customers can preorder it in that batch.</p></div>` : ''}
       <div class="field" style="margin-top:24px"><span class="label" style="margin-bottom:8px">What customers see</span><div class="pv-card" id="pd-pv"></div></div>`,
     foot: () => `${cancelBtn}<button class="btn primary" id="pd-go">${id ? 'Save changes' : 'Add product'}</button>`,
     mount(el) {
@@ -2463,7 +2493,7 @@ function msgBalance(o) {
   const c = calc(o), f = first(custOf(o).name);
   const here = c.items.filter(i => i.here && !i.handedOver);
   if (c.missing.length) {
-    const late = c.missing.map(itemEta).filter(Boolean).sort().pop();
+    const due = c.missing.map(itemEta).filter(Boolean).sort().pop(), late = due && dayDiff(due) >= 0 ? due : null;
     return `Hi ${f}, part of your order #${o.id} has arrived in Lagos${here.length ? `: ${andList(here.map(i => 'the ' + lc(i.p.name)))}` : ''}.${late ? ` The rest is expected around ${fmt(late)}.` : ''} We’ll keep everything safe until then, so it all comes to you together. Follow your order here:\n${statusUrl(o.id)}\n\n${STORE.owner}`;
   }
   if (!c.shipKnown) return `Hi ${f}, your order #${o.id} has arrived in Lagos. We’re working out shipping by weight and will send your final balance soon. Follow your order here:\n${statusUrl(o.id)}\n\n${STORE.owner}`;
@@ -2622,7 +2652,7 @@ const shopPhone = raw => { const d = normPhone(raw); return d.length === 10 ? fm
 const normName = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 const byNewest = (a, b) => b.at.localeCompare(a.at);
 function shopLog(text, at = nowIso()) { S.shopify.log.push({ at, text }); S.shopify.log.sort(byNewest); S.shopify.log.length = Math.min(S.shopify.log.length, 60); }
-function shopNote() { const w = shopWaiting().length; if (w) return `${w} waiting for you`; const e = S.shopify.orders[0]; return e ? `Last order ${agoAt(e.at)}` : 'Connected'; }
+function shopNote() { const w = shopWaiting().length; if (w) return `${w} waiting for you`; const e = S.shopify.orders[0]; return e ? `Last order ${agoAt(e.at)}` : 'Simulated'; }
 function areaFrom(city, province) {
   const s = `${city || ''} ${province || ''}`.toLowerCase();
   const hit = Object.keys(AREAS).find(a => s.includes(a.toLowerCase()));
@@ -2787,7 +2817,7 @@ function shopifyPage() {
   const auto = es.filter(e => e.status === 'added' && !e.decided).length;
   return `<div class="page">
     <div class="ph">
-      <div><p class="eyebrow">Sales channel</p><h1 class="money-h">Shopify ${pill('Connected', 'green', 'check')}</h1><p class="sub">${SHOP.store}. New orders arrive here a few seconds after checkout. <span class="faint">Simulation: not connected to the real store.</span></p></div>
+      <div><p class="eyebrow">Sales channel</p><h1 class="money-h">Shopify ${pill('Simulated')}</h1><p class="sub">${SHOP.store}. This page isn’t connected to the real store yet, so the orders below are samples. Once it is, new orders arrive a few seconds after checkout.</p></div>
       <div class="acts"><button class="btn" data-act="shop-import">${ic('upload')}Import a Shopify export</button><button class="btn primary" data-act="shop-test">Send a test order</button></div>
     </div>
     <section class="panel overview">
@@ -2820,7 +2850,7 @@ function shopifyPage() {
           </ul></section>
         <section class="sec"><div class="sec-h"><h2>Connection</h2></div>
           <ul class="facts">
-            <li><div class="fh">Store</div><p>${SHOP.store}</p><p class="muted">Connected ${fmtY(sh.connectedOn)}</p></li>
+            <li><div class="fh">Store</div><p>${SHOP.store}</p><p class="muted">Not connected yet. Simulated.</p></li>
             <li><div class="fh">From Shopify</div><p>New orders, edits, cancellations and refunds</p><p class="muted">Shopify’s own Fulfilled status is ignored.</p></li>
             <li><div class="fh">To Shopify</div><p>Fulfilled, when an order is dispatched</p><p class="muted">Shopify doesn’t email the customer.</p></li>
             <li><div class="fh">Nightly check</div><p>Every night at 2am</p><p class="muted">Asks Shopify for the last two days of orders and adds any it missed.</p></li>
@@ -2862,7 +2892,7 @@ function shopBatchModal(no) {
   openModal({
     title: `Choose a batch for #${e.no}`, size: 'sm',
     body: () => `<p>${esc(first(e.cust.name))}’s order was placed on ${fmtY(e.created)}, when ${e.hold.two ? 'two batches were' : 'no batch was'} taking orders.</p>
-      ${obs.length ? `${obs.map(b => `<button class="opt" role="radio" aria-checked="${b.id === pick}" data-b="${b.id}"><span class="l"><span class="radio"></span><span><strong>${esc(b.name)}</strong><small>Taking orders until ${fmt(b.closesOn)}. ${plural(ordersIn(b).length, 'order')} so far</small></span></span></button>`).join('')}<p class="help">The order’s products are added to the batch.</p>`
+      ${obs.length ? `${obs.map(b => `<button class="opt" role="radio" aria-checked="${b.id === pick}" data-b="${b.id}"><span class="l"><span class="radio"></span><span><strong>${esc(b.name)}</strong><small>${cap(untilText(b))}. ${plural(ordersIn(b).length, 'order')} so far</small></span></span></button>`).join('')}<p class="help">The order’s products are added to the batch.</p>`
         : `<div class="be-empty">No batch is taking orders. <a href="#batches/new">Create a batch</a> first.</div>`}`,
     foot: () => `${cancelBtn}<button class="btn primary" id="sb-go" ${pick ? '' : 'disabled'}>Add to batch</button>`,
     mount(el) {
@@ -2995,7 +3025,7 @@ function shopImport(s, batchId) {
   return es.length;
 }
 function importModal() {
-  let s = null, err = '', fresh = true, pick = openBatches()[0] ? openBatches()[0].id : null;
+  let s = null, err = '', fresh = true, pick = (takingBatches()[0] || openBatches()[0] || {}).id || null;
   const range = () => s.from === s.to ? fmtY(s.from) : `${fmt(s.from)} to ${fmtY(s.to)}`;
   const review = () => {
     const obs = openBatches(), owed = sum(s.checks.map(e => e.outstanding));
@@ -3012,7 +3042,7 @@ function importModal() {
       ${s.autoFul ? `<p class="help" style="margin:0 0 14px">Shopify marked ${s.autoFul === s.keep.length ? 'every one' : plural(s.autoFul, 'order')} as fulfilled the moment ${s.autoFul === 1 ? 'it was' : 'they were'} placed. That’s a Shopify setting. PreorderDesk ignores it: an order is fulfilled here when it’s handed over.</p>` : ''}
       <label class="check"><input type="checkbox" id="im-fresh" ${fresh ? 'checked' : ''}> Start fresh: remove the sample orders, customers and batches</label>
       ${fresh ? `<div class="readonly" style="margin-bottom:8px">They go into a new ${MONTHS[Number(s.to.slice(5, 7)) - 1]} batch, taking orders until ${fmtY(s.to > TODAY ? s.to : TODAY)}.</div>`
-        : obs.length ? `<div class="field"><label for="im-batch">Add them to</label><select id="im-batch">${obs.map(b => `<option value="${b.id}" ${b.id === pick ? 'selected' : ''}>${esc(b.name)}, taking orders until ${fmt(b.closesOn)}</option>`).join('')}</select></div>`
+        : obs.length ? `<div class="field"><label for="im-batch">Add them to</label><select id="im-batch">${obs.map(b => `<option value="${b.id}" ${b.id === pick ? 'selected' : ''}>${esc(b.name)}, ${untilText(b)}</option>`).join('')}</select></div>`
         : '<div class="be-empty">No batch is taking orders. Start fresh, or create a batch first.</div>'}
       <p class="help">The sample data comes back with Reset in the sidebar.</p>`;
   };
@@ -3899,7 +3929,7 @@ function useSpare(o, idx) {
 /* The import scenario: 40 orders for five products from five suppliers, orders closed, nothing bought yet */
 function scenarioSeed() {
   const base = seed();
-  const s = { v: 3, seq: 1141, products: base.products, customers: [], orders: [], moves: [], dispatches: [], dseq: 1000, runs: [], rseq: 100, scenario: true,
+  const s = { v: 3, asOf: TODAY, seq: 1141, products: base.products, customers: [], orders: [], moves: [], dispatches: [], dseq: 1000, runs: [], rseq: 100, scenario: true,
     batches: [{ id: 'NOV', name: 'November batch', ref: 'SHP-2608', from: 'Guangzhou', status: 'buying', supply: true, createdOn: rel(-28), closesOn: rel(-3), ordersClosedOn: rel(-3), shippedOn: null, eta: null, receivedOn: null, ratePerKg: null, cost: null,
       spareKg: 0, spareUnits: 0, spareBy: {}, planBy: { CI07: 2, GB12: 4, HD02: 1, KB04: 12, SP01: 1 }, shelf: 'D', lineup: ['CI07', 'GB12', 'HD02', 'KB04', 'SP01'], log: [], deliveries: [] }] };
   s.shopify = { store: SHOP.store, connectedOn: rel(-160), lastCheck: lastNight(), nextNo: 6017, testN: 0, orders: [], log: [], file: null };
@@ -3949,7 +3979,7 @@ function copyText(text, done) {
 }
 /* Products customers can preorder: those in batches taking orders, grouped by name so variants are options of one product */
 /* Batches the storefront offers: taking orders and not past their closing date */
-const storeBatches = () => openBatches().filter(b => b.closesOn >= TODAY);
+const storeBatches = () => takingBatches();
 function storeGroups() {
   const groups = {};
   storeBatches().forEach(b => (b.lineup || []).forEach(id => {
@@ -3962,7 +3992,7 @@ function storeGroups() {
 }
 const storeOrders = () => S.orders.filter(o => o.channel === 'Storefront');
 function storefrontPage() {
-  const sf = S.storefront, gs = storeGroups(), ob = storeBatches(), late = openBatches().filter(b => b.closesOn < TODAY);
+  const sf = S.storefront, gs = storeGroups(), ob = storeBatches(), late = openBatches().filter(pastClose);
   const os = storeOrders().map(o => ({ o, c: calc(o), cu: custOf(o) }));
   const from = k => os.filter(x => (x.o.via || 'Direct') === k);
   const shown = gs.filter(g => !g.hidden).length;
@@ -4227,8 +4257,8 @@ function sideBatches() {
 }
 function batchNote(b) {
   const inDays = n => n <= 0 ? 'today' : n === 1 ? 'tomorrow' : `in ${n} days`;
-  if (b.status === 'open') return `Closes ${inDays(dayDiff(b.closesOn))}`;
-  if (b.status === 'transit') return !b.eta ? 'In transit' : dayDiff(b.eta) < 0 ? `Expected ${fmt(b.eta)}` : `Expected ${inDays(dayDiff(b.eta))}`;
+  if (b.status === 'open') return pastClose(b) ? 'Past closing date' : `Closes ${inDays(dayDiff(b.closesOn))}`;
+  if (b.status === 'transit') return !b.eta ? 'In transit' : dayDiff(b.eta) < 0 ? `Was due ${fmt(b.eta)}` : `Expected ${inDays(dayDiff(b.eta))}`;
   if (b.status === 'partial') return `${batchGot(b)} of ${batchTotal(b)} received`;
   if (b.status === 'buying') { const n = sum(batchLines(b).filter(x => !x.i.po && !x.i.receivedOn && !x.i.handedOver).map(x => x.i.qty)); return n ? `${plural(n, 'unit')} to buy` : 'Bought, not shipped yet'; }
   if (!b.supply && !b.cost) return 'Freight cost needed';
@@ -4300,7 +4330,7 @@ function render() {
     <nav class="nav" aria-label="Home">${navLink(NAV[0])}</nav>
     ${NAV_GROUPS.map(([g, h]) => `<section aria-labelledby="side-${g}"><h2 class="side-h" id="side-${g}">${h}</h2><nav class="nav" aria-labelledby="side-${g}">${NAV.filter(n => n[4] === g).map(navLink).join('')}</nav></section>`).join('')}
     ${bm.length ? `<section aria-labelledby="side-bm"><h2 class="side-h" id="side-bm">Active batches</h2><nav class="nav bm" aria-labelledby="side-bm">${bm.map(b => `<a href="#batch/${b.id}" class="${b.id === bmOn ? 'on' : ''}" ${b.id === bmOn ? 'aria-current="page"' : ''}>${ic('batches')}<span>${esc(b.name)}<small>${batchNote(b)}</small></span></a>`).join('')}</nav></section>` : ''}
-    <div class="side-foot"><span>${S.scenario ? 'Import scenario' : 'Sample data'}<small>Nothing is sent and no real money moves.</small></span><span class="links"><button class="link" data-act="reset">Reset</button>${S.scenario ? '' : '<button class="link" data-act="scenario">Load scenario</button>'}</span></div>`;
+    <div class="side-foot"><span>${S.scenario ? 'Import scenario' : 'Sample data'}<small>Nothing is sent and no real money moves.</small></span><span class="links"><button class="link" data-act="reset">Reset</button>${S.scenario ? '' : '<button class="link" data-act="scenario">Load scenario</button>'}</span>${S.oldDates ? '<small class="old">These sample dates are old. Reset brings them up to today.</small>' : ''}</div>`;
   $('#tabbar').innerHTML = NAV.filter(n => PHONE_NAV.includes(n[0])).map(([k, l, href, icn]) => `<a href="${href}" class="${k === nav ? 'on' : ''}" ${k === nav ? 'aria-current="page"' : ''}>${ic(icn)}${l}</a>`).join('');
   $('#newmenu').innerHTML = `<button data-act="add-product">${ic('box')}Add product</button><a href="#batches/new">${ic('batches')}New batch</a><hr><a href="#orders/new">${ic('orders')}New order</a><button data-act="add-customer">${ic('customers')}Add customer</button>`;
   if (parts[0] === 'orders') { const oq = $('#oq'); oq.addEventListener('input', () => { orderQuery = oq.value; $('#orows').innerHTML = orderRows($('#orows').dataset.tab); }); }
