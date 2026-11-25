@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
 <title>Preorder</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@300..900&display=swap">
 <style>
 /* PreorderDesk storefront: the public preorder page a merchant shares on WhatsApp, Instagram and Facebook.
-   It is kept apart from the merchant dashboard (../index.html) and only reads and adds orders through the shared data.
+   It is kept apart from the merchant dashboard (DASH below) and only reads and adds orders through the shared data.
    Production: store.preorderdesk.com/<business>/products/<product>. Here: store/#/<business>/products/<product>.
    Layout: Square payment links (business name, image, title, price, one checkout button), Etsy's shop grid and
    "shipping details", Shop's "Expected by", H&M's variant buttons, and the dashboard's own customer order page. */
@@ -112,12 +113,16 @@ h1,h2,h3,p{margin:0}
 </style>
 </head>
 <body>
-<div class="demo-bar"><span>Sample storefront. Orders are saved in this browser only, and no money moves.</span><a href="../#storefront">Open the dashboard</a></div>
+<div class="demo-bar"><span>Sample storefront. Orders are saved in this browser only, and no money moves.</span><a id="dash-link" href="../#storefront">Open the dashboard</a></div>
 <main id="store"><p class="loading">Loading…</p></main>
 <div id="overlay"></div>
 <script>
 /* ---------- Helpers (the same rules as the dashboard) ---------- */
 const KEY = 'preorderdesk-v3';
+/* Where the dashboard is: the folder above this one when run locally; on the live site that folder holds the
+   landing page and the dashboard is in its app/ folder */
+const DASH = /^https?:$/.test(location.protocol) && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) ? '../app/' : '../';
+document.getElementById('dash-link').href = DASH + '#storefront';
 const DAY = 864e5;
 const T0 = (() => { const t = new Date(); t.setHours(0, 0, 0, 0); return t.getTime(); })();
 const iso = ms => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -277,7 +282,7 @@ function donePage(id) {
       <div class="kv"><span>Paid</span><span>${naira(paid)}</span><span class="tot">Due on arrival</span><span class="tot">${naira(goods - paid)}</span></div>
       <p class="help">Plus shipping by weight, and delivery if you choose it.</p>
     </div>
-    <a class="btn primary full" href="../#status/${o.id}?from=store">Follow your order</a>
+    <a class="btn primary full" href="${DASH}#status/${o.id}?from=store">Follow your order</a>
     <p class="center" style="margin-top:14px"><a href="${base()}">Back to ${esc(sh.name)}</a></p>
   </div>`;
 }
@@ -360,7 +365,7 @@ window.addEventListener('storage', e => { if (e.key === KEY && !$('#c-go')) rout
 if (read()) route();
 else {
   const f = document.createElement('iframe');
-  f.hidden = true; f.src = '../index.html#home';
+  f.hidden = true; f.src = DASH + 'index.html#home';
   f.onload = () => { S = read(); f.remove(); route(); };
   document.body.appendChild(f);
 }

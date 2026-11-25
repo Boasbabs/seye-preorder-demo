@@ -232,6 +232,27 @@ Added 25 November 2026, to make the loop's first step real: a lightweight preord
 4. Shown and Hidden per product on the Storefront page. Square has "Channel listings", which I didn't open.
 5. On a first visit, the storefront asks the dashboard to create the sample data. That's prototype plumbing, not a screen.
 
+## v3: the landing page
+
+Added 25 November 2026: a marketing page for sellers who might use PreorderDesk, with the copy taken from a brief. It now sits at the root of the site, the dashboard moved to `app/`, and the storefront stayed at `store/`. Older links to the dashboard (`/#orders`, `/#status/1048` and so on) are forwarded to `app/`. Each section follows one section from Mobbin's Sites library, checked through Mobbin's website. Every picture is a real dashboard screen with sample data. The screens were taken from a copy with the store renamed "Demo Store", product photos and brand names removed, and the Buy list and Purchase orders links hidden.
+
+| Section | What it does | References |
+|---|---|---|
+| Header and hero | Name on the left, three section links in the middle, one Get Started button on the right. A centred headline, two short paragraphs, Get Started and See How It Works, then the dashboard home screen | [Mercury hero](https://mobbin.com/sites/sections/36860ef7-69eb-4cac-9ad4-cf2c5c097dba) |
+| The problem | "Sound familiar?", four cards with an icon and one problem each, then a closing line | [Front "Does this sound familiar?"](https://mobbin.com/sites/sections/fdeb0c2b-6196-4d02-b036-9b4c03badce5) |
+| Meet PreorderDesk | Four grey cards, each with a title, one sentence and a slice of a real screen | [Mercury feature cards](https://mobbin.com/sites/sections/f50e8194-be8b-4932-95ec-f9fa18d7be72) |
+| How it works | Four numbered steps in a row over one screen, which changes with the step. On phones it becomes a timeline with every screen shown | [Rox "How it works"](https://mobbin.com/sites/sections/53c3d7d9-8feb-4531-afd7-c1bd06bf77c0), [Amperos numbered steps](https://mobbin.com/sites/sections/43ebd766-d9a4-43d6-b9f4-4dfa80544aa3) |
+| Who it's for | Four cards with an icon, a type of seller and one line | [Acctual "Who's it for?"](https://mobbin.com/sites/sections/854560da-d735-4f7b-929e-b75ecb4193ab) |
+| Shopify | Text, three ticks and a button on the left, the Shopify screen on the right. Tagged "Early access", because the Shopify connection in the prototype is simulated | [Mailchimp Shopify integration](https://mobbin.com/sites/sections/3241428a-fcf2-4038-8b6b-4b423e2d4995) |
+| The difference | Two columns, without and with PreorderDesk, with the "with" column tinted | [Beside comparison](https://mobbin.com/sites/sections/595fbaca-74ab-4c25-b94c-b1c93f1444cd) |
+| Closing | A panel with a headline, two lines and one button | [Mercury closing panel](https://mobbin.com/sites/sections/c8611da2-7fcd-4182-bd63-1f233d5713e6) |
+
+Every Get Started button opens a WhatsApp chat with a ready message, because first sellers are set up one by one. A line under the hero and closing buttons says so.
+
+**Not backed by a direct reference.**
+1. The forwarding of old dashboard links from the root to `app/`. That's plumbing, not a screen.
+2. Icons instead of photos of sellers in "Who it's for". The brief asked for photos of Nigerian sellers, and no licensed photos were available.
+
 ## v3: still not backed by a direct reference
 
 1. The duplicate-number warning with "Use Amaka". It's a common pattern, but I didn't find it on Mobbin.

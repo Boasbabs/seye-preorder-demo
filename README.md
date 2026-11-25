@@ -6,7 +6,7 @@ A responsive HTML/CSS and vanilla JavaScript prototype for the three-business pr
 
 ## v3: PreorderDesk reimagined
 
-A second concept lives in [`v3/`](v3/) and is published at https://preorderdesk.getmayloo.com and https://boasbabs.github.io/seye-preorder-demo/v3/. It is one self-contained HTML file with sample data: nothing is sent and no money moves. It saves its state in the browser under its own key, so it does not change the demo above, and **Reset** at the bottom of its sidebar restores the sample data. [`v3/UI-VALIDATION.md`](v3/UI-VALIDATION.md) lists the Mobbin screens behind each design decision.
+A second concept lives in [`v3/`](v3/) and is published at https://preorderdesk.getmayloo.com and https://boasbabs.github.io/seye-preorder-demo/v3/. The site's root is a landing page for sellers ([`v3/index.html`](v3/index.html), pictures in `v3/img/`). The dashboard is at `/app/` ([`v3/app/index.html`](v3/app/index.html)), and older links to the root, such as `/#orders` or `/#status/1048`, are forwarded there. The dashboard is one self-contained HTML file with sample data: nothing is sent and no money moves. It saves its state in the browser under its own key, so it does not change the demo above, and **Reset** at the bottom of its sidebar restores the sample data. [`v3/UI-VALIDATION.md`](v3/UI-VALIDATION.md) lists the Mobbin screens behind each design decision.
 
 Its sidebar follows the core loop: **Share products**, **Preorders**, **Sourcing**, then **Receive and fulfil**.
 

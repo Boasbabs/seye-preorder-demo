@@ -6,7 +6,7 @@ Everything happens "today" in the prototype, so dates won't match the proposal's
 
 ## Before you start
 
-1. Open the prototype at https://preorderdesk.getmayloo.com, or run it on your own computer with the command at the end of this file.
+1. Open the prototype at https://preorderdesk.getmayloo.com/app/, or run it on your own computer with the command at the end of this file.
 2. At the bottom of the sidebar, click **Load scenario**, then **Load scenario** again. This replaces the demo data in this browser. **Reset** brings the usual sample back afterwards.
 
 You land on the **Buy list**: "60 units for 40 orders, from 5 suppliers". The batch shows as **Orders closed**.
@@ -94,7 +94,7 @@ On **Purchase orders**, click **Record payment** five times:
 
 ## Running it on your own computer
 
-From the folder that holds `index.html`, run this, then open http://localhost:4317:
+From the `v3` folder of the repository, run this, then open http://localhost:4317/app/:
 
 ```bash
 python3 -m http.server 4317 --bind 127.0.0.1
