@@ -3946,9 +3946,11 @@ function copyText(text, done) {
   try { navigator.clipboard.writeText(text).then(() => toast(done), () => toast(text)); } catch (e) { toast(text); }
 }
 /* Products customers can preorder: those in batches taking orders, grouped by name so variants are options of one product */
+/* Batches the storefront offers: taking orders and not past their closing date */
+const storeBatches = () => openBatches().filter(b => b.closesOn >= TODAY);
 function storeGroups() {
   const groups = {};
-  openBatches().forEach(b => (b.lineup || []).forEach(id => {
+  storeBatches().forEach(b => (b.lineup || []).forEach(id => {
     const p = P(id); if (!p || !p.price) return;
     const slug = slugify(p.name), g = groups[slug] = groups[slug] || { slug, name: p.name, p, ids: [], prices: [], batch: b };
     if (!g.ids.includes(id)) { g.ids.push(id); g.prices.push(p.price); }
@@ -3958,7 +3960,7 @@ function storeGroups() {
 }
 const storeOrders = () => S.orders.filter(o => o.channel === 'Storefront');
 function storefrontPage() {
-  const sf = S.storefront, gs = storeGroups(), ob = openBatches();
+  const sf = S.storefront, gs = storeGroups(), ob = storeBatches(), late = openBatches().filter(b => b.closesOn < TODAY);
   const os = storeOrders().map(o => ({ o, c: calc(o), cu: custOf(o) }));
   const from = k => os.filter(x => (x.o.via || 'Direct') === k);
   const shown = gs.filter(g => !g.hidden).length;
@@ -3972,7 +3974,7 @@ function storefrontPage() {
     <section class="sec">
       <div class="sec-h"><h2>Store link</h2></div>
       <div class="linkbox"><code>${esc(storeUrl())}</code><button class="btn sm" data-act="copy-link" data-url="${esc(storeUrl())}">${ic('link')}Copy</button></div>
-      <p class="help">${ob.length ? `Taking preorders for the ${esc(ob[0].name)} until ${fmtY(ob[0].closesOn)}. ${plural(shown, 'product')} on show. Customers pay ${sf.depositPct}% at checkout, and their order page follows it from there.` : 'No batch is taking orders, so the storefront has nothing to preorder. <a href="#batches/new">Create a batch</a> to open it again.'}</p>
+      <p class="help">${ob.length ? `Taking preorders for the ${esc(ob[0].name)} until ${fmtY(ob[0].closesOn)}. ${plural(shown, 'product')} on show. Customers pay ${sf.depositPct}% at checkout, and their order page follows it from there.` : late.length ? `The ${esc(late[0].name)} closed for orders on ${fmtY(late[0].closesOn)}, so the storefront has nothing to preorder. <a href="#batches/new">Create a batch</a> to open it again.` : 'No batch is taking orders, so the storefront has nothing to preorder. <a href="#batches/new">Create a batch</a> to open it again.'}</p>
       <p class="help">In the real product this lives apart from the dashboard: the dashboard at app.preorderdesk.com, the storefront at store.preorderdesk.com/${esc(sf.slug)}.</p>
     </section>
     <section class="sec">

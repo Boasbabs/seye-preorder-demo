@@ -170,7 +170,7 @@ const shop = () => ({ slug: 'preorder-with-seye', name: 'Preorder with Seye', hu
 /* What can be preordered: products in batches taking orders, grouped by name so colours and sizes are options of one product */
 function catalog() {
   const sh = shop(), groups = {};
-  S.batches.filter(b => b.status === 'open').sort((a, b) => toMs(a.closesOn) - toMs(b.closesOn)).forEach(b => (b.lineup || []).forEach(id => {
+  S.batches.filter(b => b.status === 'open' && b.closesOn >= TODAY).sort((a, b) => toMs(a.closesOn) - toMs(b.closesOn)).forEach(b => (b.lineup || []).forEach(id => {
     const p = S.products[id];
     if (!p || !p.price) return;
     const slug = slugify(p.name);
