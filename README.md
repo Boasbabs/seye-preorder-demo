@@ -8,9 +8,13 @@ A responsive HTML/CSS and vanilla JavaScript prototype for the three-business pr
 
 A second concept lives in [`v3/`](v3/) and is published at https://preorderdesk.getmayloo.com and https://boasbabs.github.io/seye-preorder-demo/v3/. It is one self-contained HTML file with sample data: nothing is sent and no money moves. It saves its state in the browser under its own key, so it does not change the demo above, and **Reset** at the bottom of its sidebar restores the sample data. [`v3/UI-VALIDATION.md`](v3/UI-VALIDATION.md) lists the Mobbin screens behind each design decision.
 
-v3's **Shopify** page (under Sales channels) simulates orders arriving from Seye's Shopify store and being matched to customers, products and batches, with a To review list for anything unclear. Test orders use the real products, prices and photos from her public storefront, with made-up customers; the photos load from Shopify's CDN. **Import a Shopify export** reads an orders CSV inside the browser and never uploads it. Never commit a real export to this repository, because it holds customers' names, phone numbers and addresses.
+Its sidebar follows the core loop: **Share products**, **Preorders**, **Sourcing**, then **Receive and fulfil**.
+
+v3's **Shopify** page (under Share products) simulates orders arriving from Seye's Shopify store and being matched to customers, products and batches, with a To review list for anything unclear. Test orders use the real products, prices and photos from her public storefront, with made-up customers; the photos load from Shopify's CDN. **Import a Shopify export** reads an orders CSV inside the browser and never uploads it. Never commit a real export to this repository, because it holds customers' names, phone numbers and addresses.
 
 v3's **Inventory** and **Dispatch** pages show what is in the Lagos warehouse per product (held for customers, spare, on the way) and the orders leaving it. Stock goes up when a delivery is received and down when an order is dispatched.
+
+v3's **Buy list**, **Purchase orders** and **Shipments** pages keep what was bought from each supplier, what was paid in yuan (direct or through an agent) and how the goods travelled apart from what customers ordered. **Load scenario** at the bottom of the sidebar loads 40 made-up orders from five suppliers, and [`v3/TEST-IMPORT-SCENARIO.md`](v3/TEST-IMPORT-SCENARIO.md) walks through buying, paying, two shipments and a short delivery step by step.
 
 ## Run
 

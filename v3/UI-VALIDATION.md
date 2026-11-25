@@ -149,6 +149,60 @@ Added 11 November 2026, after Seye asked to see what is in the warehouse as each
 
 **Not covered:** selling spare stock as an order (it can only be adjusted out, for example "Sold in person"), writing off a unit held for a customer, returns, and a packing step. The tech proposal lists them as gaps.
 
+## v3: buying, paying and shipping
+
+Added 25 November 2026, from section 23 of the tech proposal. Purchase orders, supplier payments and shipments are now kept apart from customer orders. Batches still taking orders, and every new batch, buy through them. The May, June and August sample batches had already shipped, so they keep their old buttons. The Mobbin connector wasn't available in this session, so these references come from Mobbin's website: 7 searches and 4 flows.
+
+| Screen or part | What it does | References |
+|---|---|---|
+| Buy list | Units customers ordered that no purchase order holds yet. One section per supplier, each with its own "Raise purchase order", plus a "No supplier yet" section | [Etsy cart](https://mobbin.com/screens/0abfa3dc-e025-462b-b375-1d9bb73c973f) (items grouped by shop, "Check out from shop" on each group), [Instacart cart](https://mobbin.com/screens/82e44e49-b73e-4919-ad5f-6c03d883e6e5) (one store's items under its name) |
+| "New purchase order" modal | The supplier, then one row per product: for customers, spare, ¥ per unit, total. Estimated rate, the supplier's reference, a cost summary, then "Save as draft" or "Mark as ordered" | [Shopify Create purchase order](https://mobbin.com/screens/5fa5ac8f-c4ae-4321-8467-03c5d20e27d2) (supplier, products, cost summary, reference number, currency), [Shopify Marked as ordered](https://mobbin.com/flows/23c088bb-f7c3-4578-8267-934a5750f9cb) ("Mark as ordered" turns a draft into Ordered) |
+| Purchase orders page | Overview (to pay, ordered, on the way, received, paid so far), then a table: purchase order, supplier, status, payment, shipments, received, expected arrival, total. Supplier payments are listed underneath | [Shopify Purchase order detail](https://mobbin.com/flows/172904ac-84f1-4277-ac1c-812b44ce8c6b) (list columns: purchase order, supplier, status, linked transfer, received, expected arrival, total) |
+| A purchase order | Products with units, cost, shipped and received. Shipments, landed cost and margin, and the customers it holds units for. Cost summary, payments and details on the right, and a timeline | [Shopify Purchase order detail](https://mobbin.com/flows/172904ac-84f1-4277-ac1c-812b44ce8c6b) and [Marked as ordered](https://mobbin.com/flows/23c088bb-f7c3-4578-8267-934a5750f9cb) (products table, cost summary, purchase order details, timeline, "Create transfer" once ordered), [Shopify purchase order, received](https://mobbin.com/screens/44aa57ce-d57f-495e-aaef-f62748691266) ("Total received" with a bar per product) |
+| "Record supplier payment" modal | Direct or through an agent. The purchase orders it pays, with the yuan for each. "You paid" in naira beside "Suppliers received" in yuan, and the rate under them, worked out rather than typed | [PayPal send money](https://mobbin.com/screens/023eb5a8-6ca0-44e5-af68-f4c3f81d1c5d) ("You send $2.36 USD", "Recipient gets $2.98 SGD", "Conversion rate: 1 USD = 1.2611 SGD"), [Airwallex Review conversion](https://mobbin.com/screens/7acc57b5-66ca-49fc-9c0c-8a850a90f029) (from, exchange rate, to) |
+| Shipments page | Overview (on the way, at the forwarder, with suppliers, received), then a table: shipment, forwarder, status, suppliers, received, expected arrival, cost | [Shopify Create a transfer](https://mobbin.com/flows/9017710e-4e75-44c0-abe9-cd272d17ce13) (Transfers: transfer, origin, status, "Received 0 of 200", expected arrival, a row of totals above) |
+| "New shipment" and "Add goods" | Count what the forwarder holds from each purchase order, "of 12" per line, "Add all" per order | [Shopify Receive items](https://mobbin.com/screens/df6cdd24-2698-4c65-969c-48ca3ce84d6b) (a count "of 3" per line), [Shopify Scan to pick](https://mobbin.com/screens/1a4a7eea-9799-48c4-a4eb-9163a303a7ad) (number field, "of 1") |
+| A shipment | Goods with received bars, customers on board, receipts, shortages, the cost summary per kg, details and a timeline. Collecting, On the way, Partially received, Received | [Shopify purchase order](https://mobbin.com/screens/780af3a7-0da7-4068-b1ef-c15eabc68cda) ("Estimated arrival" under shipment details), [Fresha Stock order partially received](https://mobbin.com/screens/6a574229-5489-4acb-a218-4c1767824222), v3's batch page |
+| "Receive SH-101" modal | One count per line, filled with what's still to come. "Total received: 58 of 58 units" with a bar | [Shopify Receive items](https://mobbin.com/screens/df6cdd24-2698-4c65-969c-48ca3ce84d6b) and [filled](https://mobbin.com/screens/b915690a-ee46-428e-ad13-35ef4e5e0614), [Fresha Receive order](https://mobbin.com/screens/a105efa0-23b4-45ec-88ce-13f550f7d8a7) (ordered and received side by side) |
+| "Record a shortage" modal | A count per line, a reason and who to claim from | [Shopify inventory adjustment](https://mobbin.com/screens/9628dd30-7311-4334-b9d2-6b93bd89eecc) (reasons such as Damaged, Theft or loss), [Square adjustment reasons](https://mobbin.com/screens/5b1c7f2b-a3e9-4a23-a76a-75bfb26057f4) |
+| "Add a cost" modal | What for, the naira paid, how it was billed, and a preview of each customer's shipping | v3's freight modal, unchanged in pattern |
+| Messages after departure, arrival and cost | The existing "Review messages" pager | [Calendly Review bulk email](https://mobbin.com/screens/c4bd319b-6a11-40d1-b226-e58e5f7b8b1f) |
+
+**What changed elsewhere.**
+- Sidebar: Buy list (with a count), Purchase orders and Shipments sit after Batches. On phones they're under "More" on Home.
+- Batches buying through purchase orders lose "Mark as in transit", "Receive items" and "Add freight cost". They get "Close orders now", a "Buy" button while units are on the buy list, a Purchase orders section and a Shipping panel. Their new status "Orders closed" sits between Taking orders and In transit. Arrivals show as "From SH-101" in the batch's received groups.
+- Order page: each item says where it is ("PO-1003, with the supplier", "On SH-102, expected 9 Jan", "Arrived 25 Nov on SH-101"), and a "Bought and shipped" fact links its purchase order and shipment. Shipping is worked out from the shipment that carried each unit.
+- Customer page: an item's expected date comes from its shipment. An order whose unit was lost reads "Your order has been delayed", with no shipment or supplier names.
+- To do: buy units for customers, pay a supplier, a shipment collecting at the forwarder, receive a shipment, add a shipment's cost, and a customer whose unit didn't arrive.
+- Home and Batches count "In transit" from shipments that have left.
+- Sample data: the November batch, still taking orders, now buys through purchase orders. Six sample suppliers and one Lagos cargo agent are added. "Load scenario" in the sidebar replaces the data with the 40-order import scenario. Reset goes back to the usual sample.
+
+**Not backed by a direct reference.**
+1. The claim on a shortage (Open, Recovered, Written off) and "Units turned up". I didn't find a claims screen on Mobbin.
+2. "Customers on this shipment" and the line under each count in "Receive", which says which customers it covers and how many spare. Shopify's transfers don't show customers, because Shopify stock isn't held for preorders.
+3. The shortage preview: "1 spare unit covers it in part. #1140 Temi Adebayo loses their unit and goes back on the buy list."
+4. The landed cost table's last column, "If shipping is in the price". It answers a question Seye's prices raise; I didn't search for it.
+5. The Buy list as its own page. Etsy's grouping is a cart; Shopify raises purchase orders one supplier at a time.
+6. The "Deposit paid" payment pill on purchase orders. It reuses the order payment pills' idea.
+7. "Load scenario" in the sidebar footer. It's for demos only.
+
+**Not covered:** an order line with more than one unit arrives whole, as before. A supplier price list, money left with an agent, paying the forwarder's bills and refunds are still gaps in the proposal.
+
+## v3: navigation by the core loop
+
+Changed on 25 November 2026, so the sidebar follows the product's core loop: share a product link, a customer places a preorder, the merchant manages sourcing, then receives and fulfils orders.
+
+| Before | Now | References |
+|---|---|---|
+| One flat list of ten pages, then "Active batches" and "Sales channels" | Home on its own, then four labelled groups in loop order. **Share products:** Products, Batches, Shopify. **Preorders:** Orders, Customers. **Sourcing:** Buy list, Purchase orders, Shipments. **Receive and fulfil:** Inventory, Dispatch. "Active batches" stays underneath | [Stripe section label](https://mobbin.com/screens/4f376599-af15-4da8-83e6-05c2d6067e49) ("Products" heading over its own pages), [Mercury with bookmarks](https://mobbin.com/screens/57aecdab-db4f-4459-8280-68c1aeb2fa07), both already behind v3's sidebar |
+| Shopify in its own "Sales channels" section, with a status line | Shopify under Share products, with a plain count when orders are waiting, like Dispatch and Buy list | The same count style as Mercury's "Tasks 2" |
+| Phone tabs: Home, Orders, Batches, Inventory, Dispatch | The same five, in loop order: Home, Batches, Orders, Inventory, Dispatch. "More" on Home lists the rest in loop order too | Unchanged pattern |
+| "New" menu: New order, New batch, then Add product, Add customer | Add product, New batch, then New order, Add customer | Unchanged pattern |
+
+The gap between sidebar sections went from 18px to 14px, so all four groups, the active batches and the Sample data row fit an 860px-high window.
+
+Not changed: the pages themselves, and their URLs. The proposal has no Suppliers page yet, so the loop's "Suppliers" lives inside Purchase orders.
+
 ## v3: still not backed by a direct reference
 
 1. The duplicate-number warning with "Use Amaka". It's a common pattern, but I didn't find it on Mobbin.
