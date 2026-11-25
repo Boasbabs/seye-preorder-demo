@@ -203,6 +203,35 @@ The gap between sidebar sections went from 18px to 14px, so all four groups, the
 
 Not changed: the pages themselves, and their URLs. The proposal has no Suppliers page yet, so the loop's "Suppliers" lives inside Purchase orders.
 
+## v3: the storefront
+
+Added 25 November 2026, to make the loop's first step real: a lightweight preorder page that turns a merchant's products into orders PreorderDesk manages. It's a separate file, `store/index.html`, kept apart from the dashboard. In the real product the dashboard would be app.preorderdesk.com and the storefront store.preorderdesk.com/business-name/products/product-slug. In the prototype the storefront is `store/#/preorder-with-seye/products/<slug>`. It shares the dashboard's saved data, so its orders land in Orders, on the buy list and in To do like any other. Checked with 9 Mobbin searches and 2 flows, through Mobbin's website.
+
+| Screen or part | What it does | References |
+|---|---|---|
+| Storefront home | Store name, one line on how preordering works ("Order by Tuesday 1 December. Pay 70% now…"), then a grid of what's taking preorders: photo, name, price, "3 options" | [Square payment link](https://mobbin.com/flows/02d26483-3825-43e0-9947-e38786b29bf2) (the business name above each public item page) |
+| Product page | Photo, name, price, option buttons, quantity, then four facts: order by, expected in Lagos, pay 70% now, pickup or delivery. One button: "Preorder for ₦91,000 now" | [Square payment link](https://mobbin.com/flows/02d26483-3825-43e0-9947-e38786b29bf2) (image, title, price, one checkout button), [Square Sell as preorder](https://mobbin.com/screens/b5106eda-4db2-467a-a03c-a834f40b85d9) (fulfilment window and preorder cutoff), [Etsy shipping details](https://mobbin.com/screens/d197ecf0-c45e-4093-84e9-6505d19682eb) (estimated delivery, ships from), [Shop "Expected by Aug 3"](https://mobbin.com/screens/12f57aa4-2904-487d-98f4-33fc4ee8e160), [H&M product page](https://mobbin.com/screens/cd0ef9dd-d990-4d53-adf1-8ac6d5760c88) (option buttons) |
+| Checkout | The item, "Pay now" and "Due on arrival". Name, WhatsApp number, email and area. "70% now" or "Pay in full" as option cards, then Paystack | The customer order page's option cards and Paystack modal, already referenced below (Paystack checkout, Starling and Cash App "Payment successful") |
+| Confirmation | "Preorder #1052 confirmed", what was paid and what's due on arrival, and "Follow your order", which opens the customer's order page with "Back to the store" | The same customer order page |
+| Storefront page in the dashboard | Orders from the storefront, and how many came from WhatsApp, Instagram, Facebook or direct. The store link with Copy. Each product with Shown or Hidden and Share. The storefront's orders | [Square Traffic & sources](https://mobbin.com/screens/2c972e7b-188c-4f80-b0b1-dec855069505), [Canva analytics](https://mobbin.com/screens/c880f21e-6228-4eb5-b220-240d09d66b20) (visits split into social media and website) |
+| "Share this product" modal | The product and its link, then Send on WhatsApp, Copy link for Instagram ("for your bio or a story link sticker"), Share on Facebook, Copy link | [WhatsApp channel link](https://mobbin.com/screens/c693e280-cce2-4055-96ef-5b15e47950e1) ("Send link via WhatsApp", "Copy link"), [Instagram invite link](https://mobbin.com/screens/a6ef800c-c072-4581-8811-f32ebb2a6244) (Copy, Share, Add to story), [Instagram share sheet](https://mobbin.com/screens/eecbdb17-6854-4041-9821-7cc9e9fb13c2) (WhatsApp, Copy link) |
+
+**What changed elsewhere.**
+- Sidebar: Storefront sits under Share products, after Batches. On phones it's under "More" on Home.
+- Orders from the storefront read "placed … on the storefront, from a WhatsApp link". The order page's Sales channel says "Storefront", and the orders list marks them "storefront (WhatsApp)".
+- A storefront customer is matched by WhatsApp number, or added with their email and area.
+- The storefront shows products in batches taking orders, grouped by name so colours become options. When no batch is open it says there's nothing to preorder right now.
+- New saved setting `storefront`: the store's slug, name, hub, deposit percentage and hidden products.
+
+**Deliberately not built**, as asked: a drag-and-drop builder, themes, a blog, SEO tools, affiliates, loyalty, discount codes and a marketplace. The storefront has one look and one checkout per product, with no basket.
+
+**Not backed by a direct reference.**
+1. The "?via=" in each shared link, which records the channel, and the count of orders per channel. Square counts traffic sources, but not per shared link.
+2. The storefront home's product grid. It's the usual shop grid; I didn't capture a specific screen of it.
+3. "70% now" or "Pay in full" at checkout. It follows the tech proposal's suggestion for the 70% deposit gap.
+4. Shown and Hidden per product on the Storefront page. Square has "Channel listings", which I didn't open.
+5. On a first visit, the storefront asks the dashboard to create the sample data. That's prototype plumbing, not a screen.
+
 ## v3: still not backed by a direct reference
 
 1. The duplicate-number warning with "Use Amaka". It's a common pattern, but I didn't find it on Mobbin.

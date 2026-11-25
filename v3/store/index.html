@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Preorder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@300..900&display=swap">
+<style>
+/* PreorderDesk storefront: the public preorder page a merchant shares on WhatsApp, Instagram and Facebook.
+   It is kept apart from the merchant dashboard (../index.html) and only reads and adds orders through the shared data.
+   Production: store.preorderdesk.com/<business>/products/<product>. Here: store/#/<business>/products/<product>.
+   Layout: Square payment links (business name, image, title, price, one checkout button), Etsy's shop grid and
+   "shipping details", Shop's "Expected by", H&M's variant buttons, and the dashboard's own customer order page. */
+:root{
+  --bg:#ffffff; --fill:#f5f5f7; --fill-2:#ececf0; --line:#e6e6eb; --line-2:#f0f0f3; --field:#d6d6db;
+  --ink:#1d1d1f; --ink-2:#6e6e73; --ink-3:#a1a1a6;
+  --blue:#0071e3; --blue-h:#0062c4; --blue-soft:#e9f2fd; --green:#1d7a3a; --green-soft:#e7f5eb; --red:#c0312b;
+  --ring:0 0 0 3px rgba(0,113,227,.18);
+  --f:"Figtree",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--fill);color:var(--ink);font:400 15px/1.5 var(--f);-webkit-font-smoothing:antialiased}
+body.locked{overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+h1,h2,h3,p{margin:0}
+.ic{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.demo-bar{background:var(--ink);color:#fff;font-size:13px;padding:9px 20px;display:flex;justify-content:space-between;gap:12px}
+.demo-bar a{color:#fff;font-weight:600;white-space:nowrap}
+.wrap{max-width:1000px;margin:0 auto;padding:28px 20px 64px}
+.narrow{max-width:560px}
+.loading{color:var(--ink-2);text-align:center;padding:80px 0}
+.shop-h{display:flex;align-items:center;gap:14px;margin:0 0 6px}
+.shop-av{width:52px;height:52px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:600;font-size:18px;flex:none}
+.shop-h h1{font-size:24px;line-height:30px;font-weight:600;letter-spacing:-.02em}
+.shop-h p{color:var(--ink-2);font-size:14px}
+.shop-note{color:var(--ink-2);margin:14px 0 22px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
+.card{display:block;background:#fff;border-radius:16px;overflow:hidden;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.04),0 0 0 1px rgba(0,0,0,.04)}
+.card:hover{text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,.08),0 0 0 1px rgba(0,0,0,.05)}
+.card .img{aspect-ratio:1/1}
+.card .b{padding:12px 14px 14px}
+.card strong{display:block;font-weight:500;font-size:14px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .price{margin-top:4px;font-weight:600}
+.card small{display:block;color:var(--ink-2);font-size:13px}
+.img{width:100%;background:var(--fill-2);display:grid;place-items:center;color:var(--ink-3)}
+.img img{width:100%;height:100%;object-fit:cover;display:block}
+.img svg{width:42%;height:42%;fill:none;stroke:currentColor;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
+.back{display:inline-flex;align-items:center;gap:4px;color:var(--ink-2);font-size:14px;margin:0 0 14px}
+.pcard{background:#fff;border-radius:18px;padding:20px;margin:0 0 12px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 0 0 1px rgba(0,0,0,.04)}
+.pcard h3{font-size:16px;font-weight:600;margin:0 0 12px}
+.hero{border-radius:18px;overflow:hidden;aspect-ratio:1/1;margin:0 0 16px}
+.p-name{font-size:24px;line-height:30px;font-weight:600;letter-spacing:-.02em}
+.p-price{font-size:22px;font-weight:600;margin:6px 0 14px;font-variant-numeric:tabular-nums}
+.label{display:block;font-size:13px;font-weight:500;margin:0 0 8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font-size:14px}
+.chip[aria-checked="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;height:40px;background:#fff;margin:0 0 16px}
+.stepper button{width:40px;height:38px;border:0;background:none;border-radius:50%;font-size:18px;color:var(--ink-2)}
+.stepper span{min-width:30px;text-align:center;font-weight:500;font-variant-numeric:tabular-nums}
+.facts{list-style:none;margin:0;padding:0}
+.facts li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;padding:10px 0;border-top:1px solid var(--line-2)}
+.facts li:first-child{border-top:0;padding-top:0}
+.facts strong{display:block;font-weight:500}
+.facts span{color:var(--ink-2);font-size:14px}
+.facts .ic{margin-top:2px;color:var(--ink-2)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:46px;padding:0 22px;border:0;border-radius:999px;background:var(--fill-2);color:var(--ink);font-weight:500;font-size:15px;white-space:nowrap}
+.btn:hover{text-decoration:none}
+.btn.primary{background:var(--blue);color:#fff}
+.btn.primary:hover{background:var(--blue-h)}
+.btn.full{width:100%}
+.btn:disabled{opacity:.38;pointer-events:none}
+.field{margin:0 0 14px}
+.field label{display:block;font-size:13px;font-weight:500;margin:0 0 6px}
+.field input,.field select{width:100%;height:44px;border:1px solid var(--field);border-radius:10px;padding:0 12px;background:#fff;font-size:16px}
+.field input:focus,.field select:focus{outline:none;border-color:var(--blue);box-shadow:var(--ring)}
+.help{color:var(--ink-2);font-size:13px;margin-top:6px}
+.opt{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;padding:14px 16px;margin:0 0 10px;border:1px solid var(--line);border-radius:12px;background:#fff;text-align:left}
+.opt strong{display:block;font-weight:600}
+.opt small{display:block;color:var(--ink-2);font-size:13px}
+.opt[aria-checked="true"]{border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue)}
+.opt .radio{width:18px;height:18px;border-radius:50%;border:1.5px solid #c7c7cc;flex:none}
+.opt[aria-checked="true"] .radio{border:5px solid var(--blue)}
+.opt .l{display:flex;gap:12px;align-items:center}
+.line{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:12px;align-items:center}
+.line .img{width:52px;height:52px;border-radius:10px;overflow:hidden}
+.line small{display:block;color:var(--ink-2);font-size:13px}
+.kv{display:grid;grid-template-columns:1fr auto;gap:8px 16px;padding:14px 0 0;margin-top:14px;border-top:1px solid var(--line-2);font-variant-numeric:tabular-nums}
+.kv>span:nth-child(odd){color:var(--ink-2)}
+.kv>span:nth-child(even){text-align:right}
+.kv .tot{color:var(--ink)!important;font-weight:600}
+.center{text-align:center}
+.ok{width:64px;height:64px;border-radius:50%;background:var(--green-soft);color:var(--green);display:grid;place-items:center;margin:8px auto 14px}
+.ok .ic{width:30px;height:30px;stroke-width:2.2}
+.err{color:var(--red);font-size:13px;margin:-6px 0 12px}
+.foot{color:var(--ink-3);font-size:13px;text-align:center;margin-top:28px}
+.ov-back{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.28)}
+.modal{position:fixed;z-index:61;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,calc(100% - 32px));background:#fff;border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.18);padding:24px}
+.spin{width:32px;height:32px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--blue);margin:8px auto 12px;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (min-width:860px){
+  .p-layout{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:32px;align-items:start}
+  .hero{margin:0}
+}
+</style>
+</head>
+<body>
+<div class="demo-bar"><span>Sample storefront. Orders are saved in this browser only, and no money moves.</span><a href="../#storefront">Open the dashboard</a></div>
+<main id="store"><p class="loading">Loading…</p></main>
+<div id="overlay"></div>
+<script>
+/* ---------- Helpers (the same rules as the dashboard) ---------- */
+const KEY = 'preorderdesk-v3';
+const DAY = 864e5;
+const T0 = (() => { const t = new Date(); t.setHours(0, 0, 0, 0); return t.getTime(); })();
+const iso = ms => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const TODAY = iso(T0);
+const toMs = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d).getTime(); };
+const fmtY = s => s ? new Date(toMs(s)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+const fmtD = s => s ? new Date(toMs(s)).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
+const naira = n => '₦' + Math.round(n).toLocaleString('en-NG');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const ceil100 = n => Math.ceil(n / 100) * 100;
+const first = name => String(name).trim().split(/\s+/)[0];
+const digitStr = s => String(s || '').replace(/\D/g, '');
+const normPhone = s => { let d = digitStr(s); if (d.startsWith('234')) d = d.slice(3); if (d.startsWith('0')) d = d.slice(1); return d; };
+const fmtPhone = d => `+234 ${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}`.trim();
+const slugify = s => String(s).toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60).replace(/-+$/g, '');
+const bigImg = u => u ? String(u).replace(/([?&])width=\d+/, '$1width=800') : u;
+const AREAS = {
+  Lekki: ['Lagos', 6000], Ajah: ['Lagos', 6500], Ikoyi: ['Lagos', 5500], 'Victoria Island': ['Lagos', 5500],
+  Yaba: ['Lagos', 4500], Ikeja: ['Lagos', 4500], Surulere: ['Lagos', 4500], Gbagada: ['Lagos', 4500],
+  Wuse: ['Abuja', 7500], Gwarinpa: ['Abuja', 7500], 'Port Harcourt': ['Rivers', 9000], Bodija: ['Ibadan', 6000],
+  Kaduna: ['Kaduna', 9500], Enugu: ['Enugu', 9000],
+};
+const PI = {
+  pot: '<path d="M5 10h14v5a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"/><path d="M3 10h2M19 10h2M9 7h6"/>',
+  bowl: '<path d="M3.5 11h17a8.5 8.5 0 0 1-17 0z"/><path d="M9 19.5h6"/>',
+  dispenser: '<rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M7 8h10M11 13h2v3"/>',
+  pan: '<path d="M3 11h12v3a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><path d="M15 12.5h6"/>',
+  steam: '<path d="M6 8h12v10a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z"/><path d="M6 12h12M6 16h12M9 5h6"/>',
+  shoe: '<path d="M3 17h18v-1.5c0-1-1-1.6-2.5-1.8-2.5-.3-4.5-1.6-6-4.2L11 8 8 11.5 5 9.5 3 12z"/>',
+  bag: '<path d="M5.5 8.5h13l-1 11.5h-11z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/>',
+  box: '<path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/>',
+};
+const I = {
+  back: '<path d="M12 4.5 6.5 10l5.5 5.5"/>',
+  calendar: '<rect x="3" y="4.5" width="14" height="12.5" rx="1.5"/><path d="M3 8.5h14M7 2.5v4M13 2.5v4"/>',
+  ship: '<path d="M2.5 12.5h15l-1.8 3.2a1 1 0 0 1-.9.5H5.2a1 1 0 0 1-.9-.5z"/><path d="M5.5 12.5V8.5h4v4M9.5 12.5V8.5h4v4"/>',
+  money: '<rect x="2.5" y="5" width="15" height="10" rx="1.5"/><circle cx="10" cy="10" r="2"/>',
+  truck: '<path d="M2.5 5.5h9v8h-9zM11.5 8.5h3l3 3v2h-6"/><circle cx="6" cy="14.5" r="1.5"/><circle cx="14.5" cy="14.5" r="1.5"/>',
+  check: '<path d="m4.5 10.5 3.5 3.5 7.5-8"/>',
+};
+const ic = n => `<svg class="ic" viewBox="0 0 20 20" aria-hidden="true">${I[n] || ''}</svg>`;
+const pic = (g, big) => g.image ? `<img src="${esc(big ? bigImg(g.image) : g.image)}" alt="" loading="lazy">` : `<svg viewBox="0 0 24 24" aria-hidden="true">${PI[g.icon] || PI.box}</svg>`;
+
+/* ---------- Shared data: the dashboard and the storefront read and write the same saved state ---------- */
+let S = null;
+const read = () => { try { const s = JSON.parse(localStorage.getItem(KEY)); return s && s.v === 3 ? s : null; } catch (e) { return null; } };
+const shop = () => ({ slug: 'preorder-with-seye', name: 'Preorder with Seye', hub: 'Lekki hub', owner: 'Seye', depositPct: 70, on: true, hidden: [], ...((S && S.storefront) || {}) });
+/* What can be preordered: products in batches taking orders, grouped by name so colours and sizes are options of one product */
+function catalog() {
+  const sh = shop(), groups = {};
+  S.batches.filter(b => b.status === 'open').sort((a, b) => toMs(a.closesOn) - toMs(b.closesOn)).forEach(b => (b.lineup || []).forEach(id => {
+    const p = S.products[id];
+    if (!p || !p.price) return;
+    const slug = slugify(p.name);
+    if ((sh.hidden || []).includes(slug)) return;
+    const g = groups[slug] = groups[slug] || { slug, name: p.name, image: null, icon: p.icon, vars: [] };
+    if (!g.vars.some(v => v.p.id === id)) g.vars.push({ p, b });
+    if (!g.image && p.image) g.image = p.image;
+  }));
+  return Object.values(groups).map(g => ({ ...g, from: Math.min(...g.vars.map(v => v.p.price)), same: new Set(g.vars.map(v => v.p.price)).size === 1, closes: g.vars.map(v => v.b.closesOn).sort()[0] }));
+}
+const deposit = goods => ceil100(goods * shop().depositPct / 100);
+const viaKey = 'pd-store-via';
+const VIA = { whatsapp: 'WhatsApp', instagram: 'Instagram', facebook: 'Facebook' };
+
+/* ---------- Pages ---------- */
+const base = () => `#/${shop().slug}`;
+function notFound(text) { return `<div class="wrap narrow center"><h1 class="p-name" style="margin:60px 0 8px">${esc(text)}</h1><p style="color:var(--ink-2)">Check the link you were sent.</p></div>`; }
+function homePage() {
+  const sh = shop(), list = catalog(), closes = list.map(g => g.closes).sort()[0];
+  return `<div class="wrap">
+    <div class="shop-h"><span class="shop-av">${esc(sh.name.split(/\s+/).filter(w => /^[A-Z]/.test(w)).map(w => w[0]).join('').slice(0, 2) || sh.name[0])}</span><div><h1>${esc(sh.name)}</h1><p>Preorders from China, delivered from our ${esc(sh.hub)}</p></div></div>
+    ${list.length ? `<p class="shop-note">Order by ${fmtD(closes)}. Pay ${sh.depositPct}% now and the rest when your order reaches Lagos.</p>
+      <div class="grid">${list.map(g => `<a class="card" href="${base()}/products/${g.slug}"><div class="img">${pic(g)}</div><div class="b"><strong>${esc(g.name)}</strong><div class="price">${g.same ? '' : 'From '}${naira(g.from)}</div>${g.vars.length > 1 ? `<small>${g.vars.length} options</small>` : ''}</div></a>`).join('')}</div>`
+      : `<div class="pcard center" style="margin-top:22px"><h3>Nothing to preorder right now</h3><p style="color:var(--ink-2)">${esc(sh.name)} isn’t taking preorders at the moment. Check back soon.</p></div>`}
+    <p class="foot">Questions? Message ${esc(sh.name)} on WhatsApp.</p>
+  </div>`;
+}
+let pick = { v: null, q: 1 };
+function productPage(slug) {
+  const g = catalog().find(x => x.slug === slug);
+  if (!g) return notFound('This product isn’t available to preorder');
+  if (!pick.v || !g.vars.some(v => v.p.id === pick.v)) pick = { v: g.vars[0].p.id, q: 1 };
+  const v = g.vars.find(x => x.p.id === pick.v), sh = shop(), goods = v.p.price * pick.q, now = deposit(goods);
+  const opts = g.vars.length > 1 || v.p.variant;
+  return `<div class="wrap">
+    <a class="back" href="${base()}">${ic('back')}All products</a>
+    <div class="p-layout">
+      <div class="hero img">${pic(g, true)}</div>
+      <div>
+        <h1 class="p-name">${esc(g.name)}</h1>
+        <p class="p-price">${naira(v.p.price)}</p>
+        ${opts ? `<span class="label">Option: ${esc(v.p.variant || 'Standard')}</span><div class="chips" role="radiogroup" aria-label="Option">${g.vars.map(x => `<button type="button" class="chip" role="radio" aria-checked="${x.p.id === v.p.id}" data-var="${x.p.id}">${esc(x.p.variant || 'Standard')}</button>`).join('')}</div>` : ''}
+        <span class="label">Quantity</span>
+        <div class="stepper"><button type="button" data-q="-1" aria-label="One fewer">−</button><span>${pick.q}</span><button type="button" data-q="1" aria-label="One more">+</button></div>
+        <div class="pcard">
+          <ul class="facts">
+            <li>${ic('calendar')}<div><strong>Order by ${fmtD(v.b.closesOn)}</strong><span>This is a preorder. We order from our supplier once preorders close.</span></div></li>
+            <li>${ic('ship')}<div><strong>${v.b.eta ? `Expected in Lagos around ${fmtY(v.b.eta)}` : 'Ships from China after preorders close'}</strong><span>${v.b.eta ? 'We’ll message you on WhatsApp when it arrives.' : 'We’ll message you on WhatsApp with the date once it ships.'}</span></div></li>
+            <li>${ic('money')}<div><strong>Pay ${naira(now)} now</strong><span>That’s ${sh.depositPct}%. The rest, plus shipping by weight, is due when it reaches Lagos.</span></div></li>
+            <li>${ic('truck')}<div><strong>Pickup or delivery</strong><span>Collect it from our ${esc(sh.hub)}, or have it delivered to your area.</span></div></li>
+          </ul>
+        </div>
+        <a class="btn primary full" href="${base()}/products/${g.slug}/checkout">Preorder for ${naira(now)} now</a>
+      </div>
+    </div>
+  </div>`;
+}
+let form = { name: '', phone: '', email: '', area: '', pay: 'deposit', err: '' };
+function checkoutPage(slug) {
+  const g = catalog().find(x => x.slug === slug);
+  if (!g) return notFound('This product isn’t available to preorder');
+  if (!pick.v || !g.vars.some(v => v.p.id === pick.v)) pick = { v: g.vars[0].p.id, q: 1 };
+  const v = g.vars.find(x => x.p.id === pick.v), sh = shop(), goods = v.p.price * pick.q, dep = deposit(goods), now = form.pay === 'full' ? goods : dep;
+  return `<div class="wrap narrow">
+    <a class="back" href="${base()}/products/${g.slug}">${ic('back')}Back</a>
+    <h1 class="p-name" style="margin:0 0 16px">Your preorder</h1>
+    <div class="pcard">
+      <div class="line"><div class="img">${pic(g)}</div><div>${esc(g.name)}<small>${esc(v.p.variant || '')}${v.p.variant ? ', ' : ''}quantity ${pick.q}</small></div><strong>${naira(goods)}</strong></div>
+      <div class="kv"><span>Pay now</span><span class="tot">${naira(now)}</span><span>Due on arrival</span><span>${naira(goods - now)}</span></div>
+      <p class="help">Shipping by weight, and delivery if you choose it, are added when your order reaches Lagos.</p>
+    </div>
+    <div class="pcard">
+      <h3>Your details</h3>
+      <div class="field"><label for="c-name">Full name</label><input id="c-name" autocomplete="name" value="${esc(form.name)}"></div>
+      <div class="field"><label for="c-phone">WhatsApp number</label><input id="c-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0803 123 4567" value="${esc(form.phone)}"><p class="help">We’ll send your order updates here.</p></div>
+      <div class="field"><label for="c-email">Email</label><input id="c-email" type="email" autocomplete="email" value="${esc(form.email)}"><p class="help">For your Paystack receipt.</p></div>
+      <div class="field"><label for="c-area">Where are you?</label><select id="c-area"><option value="">Choose your area</option>${Object.entries(AREAS).map(([a, [st]]) => `<option value="${esc(a)}" ${a === form.area ? 'selected' : ''}>${esc(a === st || st === 'Rivers' ? a : `${a}, ${st}`)}</option>`).join('')}</select><p class="help">You choose pickup or delivery when your order arrives.</p></div>
+    </div>
+    <div class="pcard">
+      <h3>How much to pay now</h3>
+      <button type="button" class="opt" role="radio" aria-checked="${form.pay === 'deposit'}" data-pay="deposit"><span class="l"><span class="radio"></span><span><strong>${sh.depositPct}% now</strong><small>The rest when it reaches Lagos</small></span></span><strong>${naira(dep)}</strong></button>
+      <button type="button" class="opt" role="radio" aria-checked="${form.pay === 'full'}" data-pay="full"><span class="l"><span class="radio"></span><span><strong>Pay in full</strong><small>Only shipping and delivery later</small></span></span><strong>${naira(goods)}</strong></button>
+    </div>
+    ${form.err ? `<p class="err">${esc(form.err)}</p>` : ''}
+    <button class="btn primary full" id="c-go">Pay ${naira(now)} with Paystack</button>
+    <p class="foot" style="margin-top:10px">Secure payment with Paystack</p>
+  </div>`;
+}
+function donePage(id) {
+  const o = S.orders.find(x => x.id === String(id));
+  if (!o || o.channel !== 'Storefront') return notFound('We couldn’t find that order');
+  const cu = S.customers.find(c => c.id === o.customerId) || { name: 'there' }, sh = shop();
+  const it = o.items[0], p = S.products[it.sku], b = S.batches.find(x => x.id === it.batchId);
+  const paid = o.payments.reduce((a, x) => a + x.amount, 0), goods = it.price * it.qty;
+  return `<div class="wrap narrow">
+    <div class="pcard center">
+      <div class="ok">${ic('check')}</div>
+      <p style="color:var(--ink-2)">Thank you, ${esc(first(cu.name))}</p>
+      <h1 class="p-name" style="margin:4px 0 6px">Preorder #${o.id} confirmed</h1>
+      <p style="color:var(--ink-2)">${naira(paid)} paid. We’ll message you on WhatsApp when it ${b && b.eta ? `reaches Lagos, around ${fmtY(b.eta)}` : 'ships'}.</p>
+    </div>
+    <div class="pcard">
+      <div class="line"><div class="img">${pic({ image: p.image, icon: p.icon })}</div><div>${esc(p.name)}<small>${esc(p.variant || '')}${p.variant ? ', ' : ''}quantity ${it.qty}</small></div><strong>${naira(goods)}</strong></div>
+      <div class="kv"><span>Paid</span><span>${naira(paid)}</span><span class="tot">Due on arrival</span><span class="tot">${naira(goods - paid)}</span></div>
+      <p class="help">Plus shipping by weight, and delivery if you choose it.</p>
+    </div>
+    <a class="btn primary full" href="../#status/${o.id}?from=store">Follow your order</a>
+    <p class="center" style="margin-top:14px"><a href="${base()}">Back to ${esc(sh.name)}</a></p>
+  </div>`;
+}
+
+/* ---------- Placing the order: the same records the dashboard makes, so the order is managed there ---------- */
+function placeOrder(g, v, pay) {
+  const s = read(), sh = shop();
+  const b = s.batches.find(x => x.id === v.b.id), p = s.products[v.p.id];
+  if (!b || b.status !== 'open' || !p) throw new Error('This product stopped taking preorders. Refresh the page.');
+  const d = normPhone(form.phone);
+  let cu = s.customers.find(c => c.phone && normPhone(c.phone) === d);
+  if (!cu) { cu = { id: 'c' + Date.now(), name: form.name.trim(), area: form.area, phone: fmtPhone(d), instagram: '', email: form.email.trim(), createdOn: TODAY, fromStore: true }; s.customers.push(cu); }
+  else { if (!cu.email) cu.email = form.email.trim(); if (!cu.area) cu.area = form.area; }
+  const goods = p.price * pick.q, amount = pay === 'full' ? goods : deposit(goods);
+  const via = sessionStorage.getItem(viaKey) || null, ref = 'PSK-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+  const o = { id: String(s.seq++), customerId: cu.id, channel: 'Storefront', via, created: TODAY,
+    items: [{ sku: p.id, qty: pick.q, price: p.price, batchId: b.id, shipIncluded: false, handedOver: false, released: false, shelf: null, receivedOn: null, dId: null }],
+    delivery: null, payments: [{ id: 'p' + Date.now(), amount, date: TODAY, method: 'Paystack', ref, label: 'Paid on the storefront' }], claims: [], remindedOn: null, deliveredOn: null,
+    log: [{ date: TODAY, text: `Order placed on the storefront${via ? `, from a ${via} link` : ''}`, kind: 'event' },
+      { date: TODAY, text: `${pay === 'full' ? 'Payment' : 'Deposit'} of ${naira(amount)} received by Paystack on the storefront (${ref})`, kind: 'event' }] };
+  if (!(b.lineup || []).includes(p.id)) (b.lineup = b.lineup || []).push(p.id);
+  s.orders.unshift(o);
+  localStorage.setItem(KEY, JSON.stringify(s));
+  S = s;
+  return o;
+}
+/* Paystack's hosted checkout, simulated (as on the customer's order page) */
+function paystack(amount, onPaid) {
+  const ov = $('#overlay');
+  const draw = step => { document.body.classList.add('locked'); ov.innerHTML = `<div class="ov-back"></div><div class="modal" role="dialog" aria-modal="true" aria-label="Paystack">
+    ${step === 'confirm' ? `<p style="color:var(--ink-3);font-size:13px">Paystack test mode. No money moves.</p><p style="color:var(--ink-2);margin-top:14px">Pay ${esc(shop().name)}</p><p style="font-size:34px;font-weight:600;letter-spacing:-.02em">${naira(amount)}</p>
+      <div style="display:flex;justify-content:space-between;background:var(--fill);border-radius:10px;padding:10px 12px;margin:12px 0 18px"><span>Card ending 4081</span><span style="color:var(--ink-2)">Test card</span></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="ps-x">Cancel</button><button class="btn primary" id="ps-go">Pay ${naira(amount)}</button></div>`
+    : `<div class="center"><div class="spin"></div><p>Confirming your payment</p></div>`}</div>`;
+    if (step === 'confirm') { $('#ps-x').onclick = close; $('#ps-go').onclick = () => { draw('wait'); setTimeout(() => { close(); onPaid(); }, 1100); }; } };
+  const close = () => { ov.innerHTML = ''; document.body.classList.remove('locked'); };
+  draw('confirm');
+}
+
+/* ---------- Routing: #/<business>, #/<business>/products/<product>, …/checkout, #/<business>/orders/<id> ---------- */
+function route() {
+  S = read() || S;
+  const raw = location.hash.replace(/^#\/?/, ''), [path, qs] = raw.split('?'), parts = path.split('/').filter(Boolean).map(decodeURIComponent);
+  const via = new URLSearchParams(qs || '').get('via');
+  if (via && VIA[via.toLowerCase()]) sessionStorage.setItem(viaKey, VIA[via.toLowerCase()]);
+  const sh = shop(), main = $('#store');
+  if (!parts.length) { location.replace(`${base()}${qs ? `?${qs}` : ''}`); return; }
+  document.title = sh.name;
+  if (parts[0] !== sh.slug || sh.on === false) { main.innerHTML = notFound('This store doesn’t exist'); return; }
+  if (parts[1] === 'products' && parts[2] && parts[3] === 'checkout') main.innerHTML = checkoutPage(parts[2]);
+  else if (parts[1] === 'products' && parts[2]) main.innerHTML = productPage(parts[2]);
+  else if (parts[1] === 'orders' && parts[2]) main.innerHTML = donePage(parts[2]);
+  else main.innerHTML = homePage();
+  mount(parts);
+}
+function mount(parts) {
+  $$('[data-var]').forEach(b => b.onclick = () => { pick.v = b.dataset.var; route(); });
+  $$('[data-q]').forEach(b => b.onclick = () => { pick.q = Math.max(1, Math.min(20, pick.q + Number(b.dataset.q))); route(); });
+  $$('[data-pay]').forEach(b => b.onclick = () => { form.pay = b.dataset.pay; route(); });
+  const keep = () => { form.name = $('#c-name').value; form.phone = $('#c-phone').value; form.email = $('#c-email').value; form.area = $('#c-area').value; };
+  ['#c-name', '#c-phone', '#c-email', '#c-area'].forEach(sel => { const el = $(sel); if (el) el.addEventListener('input', keep); if (el) el.addEventListener('change', keep); });
+  const go = $('#c-go');
+  if (go) go.onclick = () => {
+    keep();
+    const g = catalog().find(x => x.slug === parts[2]), v = g && g.vars.find(x => x.p.id === pick.v);
+    const missing = [!form.name.trim() && 'your name', normPhone(form.phone).length !== 10 && 'a WhatsApp number like 0803 123 4567', !/^\S+@\S+\.\S+$/.test(form.email.trim()) && 'your email', !form.area && 'your area'].filter(Boolean);
+    if (missing.length) { form.err = `Please add ${missing.length > 1 ? `${missing.slice(0, -1).join(', ')} and ${missing[missing.length - 1]}` : missing[0]}.`; route(); return; }
+    form.err = '';
+    const goods = v.p.price * pick.q, amount = form.pay === 'full' ? goods : deposit(goods);
+    paystack(amount, () => {
+      try { const o = placeOrder(g, v, form.pay); form = { name: '', phone: '', email: '', area: '', pay: 'deposit', err: '' }; pick = { v: null, q: 1 }; location.hash = `${base()}/orders/${o.id}`; }
+      catch (e) { form.err = e.message; route(); }
+    });
+  };
+  window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', route);
+window.addEventListener('storage', e => { if (e.key === KEY && !$('#c-go')) route(); });
+/* First visit in this browser: let the dashboard create the sample data, then show the store */
+if (read()) route();
+else {
+  const f = document.createElement('iframe');
+  f.hidden = true; f.src = '../index.html#home';
+  f.onload = () => { S = read(); f.remove(); route(); };
+  document.body.appendChild(f);
+}
+</script>
+</body>
+</html>

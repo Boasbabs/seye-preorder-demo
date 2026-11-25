@@ -14,6 +14,8 @@ v3's **Shopify** page (under Share products) simulates orders arriving from Seye
 
 v3's **Inventory** and **Dispatch** pages show what is in the Lagos warehouse per product (held for customers, spare, on the way) and the orders leaving it. Stock goes up when a delivery is received and down when an order is dispatched.
 
+v3's **Storefront** is a separate public preorder page at [`v3/store/`](v3/store/) (live at https://preorderdesk.getmayloo.com/store/). Customers pick a product, pay 70% or in full through a simulated Paystack, and the order arrives in the dashboard with the channel it was shared on (WhatsApp, Instagram or Facebook). The dashboard's Storefront page has the store link, share links per product and orders by channel. In a real product the two would live apart, at app.preorderdesk.com and store.preorderdesk.com/business-name.
+
 v3's **Buy list**, **Purchase orders** and **Shipments** pages keep what was bought from each supplier, what was paid in yuan (direct or through an agent) and how the goods travelled apart from what customers ordered. **Load scenario** at the bottom of the sidebar loads 40 made-up orders from five suppliers, and [`v3/TEST-IMPORT-SCENARIO.md`](v3/TEST-IMPORT-SCENARIO.md) walks through buying, paying, two shipments and a short delivery step by step.
 
 ## Run

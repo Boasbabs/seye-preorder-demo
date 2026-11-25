@@ -65,6 +65,17 @@ h1,h2,h3,p{margin:0}
 .side-foot .link{margin-left:auto;font-size:12px}
 .side-foot .links{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 .side-foot .links .link{margin:0;white-space:nowrap}
+.linkbox{display:flex;gap:10px;align-items:center;padding:8px 8px 8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--fill);margin:4px 0 0}
+.linkbox code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:13px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink)}
+.share{list-style:none;margin:6px 0 4px;padding:0}
+.share li+li{border-top:1px solid var(--line-2)}
+.share a,.share button{display:flex;gap:12px;align-items:center;width:100%;padding:12px 4px;background:none;border:0;color:var(--ink);text-align:left;border-radius:8px}
+.share a:hover,.share button:hover{text-decoration:none;background:var(--hover)}
+.share small{display:block;color:var(--ink-2);font-size:12px}
+.share .ic{color:var(--ink-2)}
+.share-h{display:flex;gap:12px;align-items:center;padding:0 0 8px}
+.share-h strong{display:block;font-weight:500}
+.share-h small{display:block;color:var(--ink-2);font-size:12px;word-break:break-all}
 .fx{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px 0 4px;margin:10px 0 0;border-top:1px solid var(--line-2)}
 .fx .label{margin-bottom:6px;color:var(--ink)}
 .fx-amt{font-size:26px;font-weight:600;line-height:40px;font-variant-numeric:tabular-nums}
@@ -997,7 +1008,7 @@ const payPill = c => pill(...c.pay);
 const fulPill = c => pill(...c.ful);
 const itemCount = o => sum(o.items.map(i => i.qty));
 const waLine = cu => cu.phone ? `${esc(cu.phone)} on WhatsApp` : 'No WhatsApp number yet';
-const channelText = o => !o.shopify ? `on ${o.channel}` : o.shopify.source === 'web' ? 'on the website' : 'by staff in Shopify';
+const channelText = o => o.channel === 'Storefront' ? `on the storefront${o.via ? `, from a ${o.via} link` : ''}` : !o.shopify ? `on ${o.channel}` : o.shopify.source === 'web' ? 'on the website' : 'by staff in Shopify';
 
 /* ---------- To do (Jobber "To do", Etsy "Top tasks") ---------- */
 function todos() {
@@ -1081,6 +1092,7 @@ function homePage() {
     <section class="sec phone-only">
       <div class="sec-h"><h2>More</h2></div>
       <ul class="todo"><li><a href="#products"><span class="ti">${ic('box')}</span><span><strong>Products</strong><small>${plural(Object.keys(S.products).length, 'product')}</small></span><span class="chev">${ic('chevR')}</span></a></li>
+        <li><a href="#storefront"><span class="ti">${ic('link')}</span><span><strong>Storefront</strong><small>${plural(storeOrders().length, 'order')} from your preorder page</small></span><span class="chev">${ic('chevR')}</span></a></li>
         <li><a href="#shopify"><span class="ti">${ic('store')}</span><span><strong>Shopify</strong><small>${shopNote()}</small></span><span class="chev">${ic('chevR')}</span></a></li>
         <li><a href="#customers"><span class="ti">${ic('customers')}</span><span><strong>Customers</strong><small>${plural(S.customers.length, 'customer')}</small></span><span class="chev">${ic('chevR')}</span></a></li>
         <li><a href="#buy"><span class="ti">${ic('cart')}</span><span><strong>Buy list</strong><small>${plural(toBuyUnits(), 'unit')} to buy</small></span><span class="chev">${ic('chevR')}</span></a></li>
@@ -1121,7 +1133,7 @@ function ordersPage(tab) {
 }
 function orderTable(rows) {
   return `<div class="tbl-wrap listify"><table class="tbl"><thead><tr><th>Order</th><th>Customer</th><th>Batch</th><th>Payment</th><th>Dispatch</th><th class="r">Total</th></tr></thead><tbody>
-    ${rows.map(({ o, c, cu }) => `<tr data-href="#order/${o.id}"><td><a class="strong" href="#order/${o.id}" style="color:inherit">#${o.id}</a><small>${fmt(o.created)}${o.shopify ? ', Shopify' : ''}</small></td><td><span class="who">${av(cu.name)}<span>${esc(cu.name)}</span></span></td><td class="muted">${esc(batchNames(o))}</td><td>${payPill(c)}</td><td>${fulPill(c)}</td><td class="r">${naira(c.total)}</td></tr>`).join('')}
+    ${rows.map(({ o, c, cu }) => `<tr data-href="#order/${o.id}"><td><a class="strong" href="#order/${o.id}" style="color:inherit">#${o.id}</a><small>${fmt(o.created)}${o.shopify ? ', Shopify' : o.channel === 'Storefront' ? `, storefront${o.via ? ` (${o.via})` : ''}` : ''}</small></td><td><span class="who">${av(cu.name)}<span>${esc(cu.name)}</span></span></td><td class="muted">${esc(batchNames(o))}</td><td>${payPill(c)}</td><td>${fulPill(c)}</td><td class="r">${naira(c.total)}</td></tr>`).join('')}
   </tbody></table></div>
   <ul class="rowlist">${rows.map(({ o, c, cu }) => `<li><a href="#order/${o.id}">${av(cu.name, 'md')}<span><strong>${esc(cu.name)}</strong><small>#${o.id}, ${fmt(o.created)}</small></span><span class="r"><span class="num">${naira(c.total)}</span>${c.claim ? payPill(c) : c.fulfillable.length || c.delivered ? fulPill(c) : payPill(c)}</span></a></li>`).join('')}</ul>`;
 }
@@ -1226,7 +1238,7 @@ function orderPage(id) {
             <li><div class="fh">${batches.length > 1 ? 'Batches' : 'Batch'}</div>${batches.map(b => `<p><a href="#batch/${b.id}">${esc(b.name)}</a> ${batchPill(b)}</p><p class="muted" style="margin-bottom:6px">${b.supply ? b.ref : `${esc(b.from)} to Lagos`}, ${batchWhen(b)}</p>`).join('')}</li>
             ${c.items.some(isSup) ? `<li><div class="fh">Bought and shipped</div>${c.items.filter(isSup).map(i => `<p>${esc(i.p.name)}</p><p class="muted" style="margin-bottom:6px">${i.po ? `<a href="#po/${i.po}">${i.po}</a>` : i.shortOn ? 'Back on the buy list' : '<a href="#buy">On the buy list</a>'}${i.shipId || i.pship ? `, <a href="#shipment/${i.shipId || i.pship}">${i.shipId || i.pship}</a>` : ''}</p>`).join('')}</li>` : ''}
             ${o.shopify ? `<li><div class="fh">Shopify</div><p>${o.shopify.sid ? `<a href="${shopAdminUrl(o.shopify.sid)}" target="_blank" rel="noopener">Order #${o.shopify.no} in Shopify</a>` : `Order #${o.shopify.no}`}</p><p class="muted">${o.shopify.source === 'web' ? 'Website checkout' : 'Created by staff in Shopify'}. <button class="link" data-act="shop-open" data-no="${o.shopify.no}">How it came in</button></p></li>`
-              : `<li><div class="fh">Sales channel</div><p>${o.channel}</p></li>`}
+              : `<li><div class="fh">Sales channel</div><p>${o.channel}</p>${o.via ? `<p class="muted">From a link shared on ${o.via}</p>` : ''}</li>`}
             <li><div class="fh">Customer’s order page</div><p><a href="#status/${o.id}" target="_blank" rel="noopener">View</a> <span class="faint">or</span> <button class="link" data-act="copy-status" data-id="${o.id}">copy link</button></p></li>
           </ul>
         </section>
@@ -1917,9 +1929,10 @@ function statusBody(o, { preview = false } = {}) {
     <p class="pub-foot">Questions about your order? Message ${STORE.name} on WhatsApp.</p>
   </div>`;
 }
-function statusPage(id) {
+function statusPage(id, from) {
   const o = orderById(id);
   if (!o) return `<div class="pub"><p class="pub-store">${STORE.name}</p><h1>We couldn’t find that order.</h1><p class="lead">Check the link in your message, or contact ${STORE.name} on WhatsApp.</p></div>`;
+  if (from === 'store') return `<div class="pub-bar"><span>Sample order page. Nothing is sent.</span><a href="${storeUrl()}">Back to the store</a></div>${statusBody(o)}`;
   return `<div class="pub-bar"><span>You’re previewing this as the customer. Nothing is sent.</span><a href="#order/${o.id}">Exit preview</a></div>${statusBody(o)}`;
 }
 function mountStatus() {
@@ -3911,7 +3924,88 @@ function scenarioSeed() {
   const b = s.batches[0];
   b.log.push({ date: b.createdOn, text: 'Batch created. Taking preorders', kind: 'event' }, { date: b.ordersClosedOn, text: `Orders closed: ${plural(s.orders.length, 'order')}, 60 units. Buy them from the buy list`, kind: 'event' });
   ensureSupply(s);
+  ensureStorefront(s);
   return s;
+}
+
+/* ---------- Storefront: the public preorder page, kept apart from this dashboard ----------
+   The storefront is its own file, store/index.html. It reads products in batches taking orders and adds orders to the
+   same saved data, so they arrive here like any other order. Production: app.preorderdesk.com is this dashboard and
+   store.preorderdesk.com/<business> the storefront. Layout: Square payment links and online ordering, WhatsApp's channel
+   link panel ("Send link via WhatsApp", "Copy link"), Instagram's link panel, Square "Traffic & sources". */
+const slugify = s => String(s).toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60).replace(/-+$/g, '');
+const VIAS = ['WhatsApp', 'Instagram', 'Facebook'];
+function ensureStorefront(s = S) {
+  if (s.storefront) return false;
+  s.storefront = { slug: slugify(STORE.name), name: STORE.name, hub: STORE.hub, owner: STORE.owner, depositPct: Math.round(MIN_DEPOSIT * 100), on: true, hidden: [] };
+  return true;
+}
+const storeUrl = (path = '') => new URL('store/', location.href.split('#')[0]).href + '#/' + S.storefront.slug + path;
+const withVia = (u, via) => `${u}${u.includes('?') ? '&' : '?'}via=${via}`;
+function copyText(text, done) {
+  try { navigator.clipboard.writeText(text).then(() => toast(done), () => toast(text)); } catch (e) { toast(text); }
+}
+/* Products customers can preorder: those in batches taking orders, grouped by name so variants are options of one product */
+function storeGroups() {
+  const groups = {};
+  openBatches().forEach(b => (b.lineup || []).forEach(id => {
+    const p = P(id); if (!p || !p.price) return;
+    const slug = slugify(p.name), g = groups[slug] = groups[slug] || { slug, name: p.name, p, ids: [], prices: [], batch: b };
+    if (!g.ids.includes(id)) { g.ids.push(id); g.prices.push(p.price); }
+    if (!g.p.image && p.image) g.p = p;
+  }));
+  return Object.values(groups).map(g => ({ ...g, hidden: (S.storefront.hidden || []).includes(g.slug), from: Math.min(...g.prices), same: new Set(g.prices).size === 1 }));
+}
+const storeOrders = () => S.orders.filter(o => o.channel === 'Storefront');
+function storefrontPage() {
+  const sf = S.storefront, gs = storeGroups(), ob = openBatches();
+  const os = storeOrders().map(o => ({ o, c: calc(o), cu: custOf(o) }));
+  const from = k => os.filter(x => (x.o.via || 'Direct') === k);
+  const shown = gs.filter(g => !g.hidden).length;
+  return `<div class="page">
+    <div class="ph"><div><h1>Storefront</h1><p class="sub">Your preorder page. Share it on WhatsApp, Instagram and Facebook, and the orders arrive here.</p></div>
+      <div class="acts"><a class="btn" href="${storeUrl()}" target="_blank" rel="noopener">${ic('ext')}View storefront</a><button class="btn primary" data-act="share">${ic('link')}Share storefront</button></div></div>
+    <section class="panel overview">
+      <div><span class="label">Orders from the storefront</span><div class="big">${os.length}</div><span class="muted">${naira(sum(os.map(x => x.c.paid)))} paid so far</span></div>
+      <div class="ov-stats">${[...VIAS, 'Direct'].map(k => `<div title="${k === 'Direct' ? 'Orders from a link without a channel, or typed in' : `Orders from links you shared on ${k}`}"><span class="label">${k === 'Direct' ? 'Direct' : `From ${k}`}</span><strong>${plural(from(k).length, 'order')}</strong></div>`).join('')}</div>
+    </section>
+    <section class="sec">
+      <div class="sec-h"><h2>Store link</h2></div>
+      <div class="linkbox"><code>${esc(storeUrl())}</code><button class="btn sm" data-act="copy-link" data-url="${esc(storeUrl())}">${ic('link')}Copy</button></div>
+      <p class="help">${ob.length ? `Taking preorders for the ${esc(ob[0].name)} until ${fmtY(ob[0].closesOn)}. ${plural(shown, 'product')} on show. Customers pay ${sf.depositPct}% at checkout, and their order page follows it from there.` : 'No batch is taking orders, so the storefront has nothing to preorder. <a href="#batches/new">Create a batch</a> to open it again.'}</p>
+      <p class="help">In the real product this lives apart from the dashboard: the dashboard at app.preorderdesk.com, the storefront at store.preorderdesk.com/${esc(sf.slug)}.</p>
+    </section>
+    <section class="sec">
+      <div class="sec-h"><h2>Products <span class="n">${gs.length}</span></h2></div>
+      ${!gs.length ? '<div class="tbl-empty">Products appear here when a batch taking orders offers them.</div>' : `<div class="tbl-wrap listify"><table class="tbl"><thead><tr><th>Product</th><th class="r">Price</th><th>On storefront</th><th></th></tr></thead><tbody>
+        ${gs.map(g => `<tr><td class="ph-wrap"><span class="who">${thumb(g.p, 'sm')}<span>${g.hidden ? `<span class="strong">${esc(g.name)}</span>` : `<a class="strong" href="${storeUrl(`/products/${g.slug}`)}" target="_blank" rel="noopener" style="color:inherit">${esc(g.name)}</a>`}<small>${g.ids.length > 1 ? `${g.ids.length} options` : esc(g.p.variant || 'One option')}. ${esc(g.batch.name)}, closes ${fmt(g.batch.closesOn)}</small></span></span></td><td class="r">${g.same ? '' : 'From '}${naira(g.from)}</td>
+          <td><label class="check" style="margin:0"><input type="checkbox" data-store-show="${g.slug}" ${g.hidden ? '' : 'checked'}> ${g.hidden ? 'Hidden' : 'Shown'}</label></td>
+          <td class="r">${g.hidden ? '' : `<button class="btn sm" data-act="share" data-id="${g.slug}">${ic('link')}Share</button>`}</td></tr>`).join('')}
+      </tbody></table></div>`}
+    </section>
+    <section class="sec">
+      <div class="sec-h"><h2>Orders from the storefront <span class="n">${os.length}</span></h2></div>
+      ${os.length ? orderTable(os) : '<div class="tbl-empty">No storefront orders yet. Share a product link and they’ll appear here.</div>'}
+    </section>
+  </div>`;
+}
+/* Share a link (WhatsApp channel link: "Send link via WhatsApp", "Copy link"; Instagram: Copy, Share, Add to story) */
+function shareModal(slug) {
+  const sf = S.storefront, g = slug ? storeGroups().find(x => x.slug === slug) : null;
+  const url = g ? storeUrl(`/products/${g.slug}`) : storeUrl();
+  const text = g ? `Preorder the ${lc(g.name)}, ${g.same ? '' : 'from '}${naira(g.from)}. Pay ${sf.depositPct}% now, order by ${fmt(g.batch.closesOn)}:` : `Preorders are open at ${sf.name}. Pay ${sf.depositPct}% now and the rest when it reaches Lagos:`;
+  openModal({
+    title: g ? 'Share this product' : 'Share your storefront', size: 'sm',
+    body: () => `<div class="share-h">${g ? thumb(g.p) : `<span class="org-av">${initials(sf.name)}</span>`}<span><strong>${esc(g ? g.name : sf.name)}</strong><small>${esc(url)}</small></span></div>
+      <ul class="share">
+        <li><a href="https://wa.me/?text=${encodeURIComponent(`${text}\n${withVia(url, 'whatsapp')}`)}" target="_blank" rel="noopener">${ic('chat')}<span>Send on WhatsApp<small>To a chat, a group or your status</small></span></a></li>
+        <li><button type="button" data-copy="${esc(withVia(url, 'instagram'))}">${ic('link')}<span>Copy link for Instagram<small>For your bio or a story link sticker</small></span></button></li>
+        <li><a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(withVia(url, 'facebook'))}" target="_blank" rel="noopener">${ic('ext')}<span>Share on Facebook<small>To your page or a group</small></span></a></li>
+        <li><button type="button" data-copy="${esc(url)}">${ic('link')}<span>Copy link<small>Orders from it count as direct</small></span></button></li>
+      </ul>
+      <p class="help">Each link carries the channel you share it on, so the Storefront page shows which one brings orders.</p>`,
+    mount(el) { $$('[data-copy]', el).forEach(b => b.addEventListener('click', () => copyText(b.dataset.copy, 'Link copied'))); },
+  });
 }
 
 /* ---------- Commit and actions ---------- */
@@ -4006,6 +4100,8 @@ const ACT = {
   'pub-pay': el => payModal(orderById(el.dataset.id)),
   'pub-change': el => { const o = orderById(el.dataset.id); commit(() => { logTo(o, 'Customer is changing their delivery method'); o.delivery = null; }); },
   'm-close': () => { if (modal && modal.noClose) return; closeModal(); },
+  'share': el => shareModal(el.dataset.id || null),
+  'copy-link': el => copyText(el.dataset.url, 'Store link copied'),
   /* Supply: purchase orders, payments, shipments */
   'close-orders': el => { const b = batchById(el.dataset.id); openModal({
     title: `Close orders for the ${b.name}?`, size: 'sm',
@@ -4035,7 +4131,7 @@ const ACT = {
     title: 'Reset demo data?', size: 'sm',
     body: () => '<p>Every order, batch, product, customer, stock count and Shopify order goes back to the sample data. This can’t be undone.</p>',
     foot: () => `${cancelBtn}<button class="btn primary" id="rs-go">Reset demo data</button>`,
-    mount(el) { $('#rs-go', el).addEventListener('click', () => { S = seed(); ensureShopify(); ensureStock(); ensureSupply(); syncSupply(); save(); od = null; bd = null; closeModal(); location.hash = '#home'; render(); toast('Demo data reset'); }); },
+    mount(el) { $('#rs-go', el).addEventListener('click', () => { S = seed(); ensureShopify(); ensureStock(); ensureSupply(); ensureStorefront(); syncSupply(); save(); od = null; bd = null; closeModal(); location.hash = '#home'; render(); toast('Demo data reset'); }); },
   }),
 };
 document.addEventListener('click', e => {
@@ -4049,6 +4145,12 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('change', e => {
   const t = e.target;
+  if (t.matches && t.matches('[data-store-show]')) {
+    const slug = t.dataset.storeShow, show = t.checked;
+    commit(() => { const h = S.storefront.hidden || []; S.storefront.hidden = show ? h.filter(x => x !== slug) : [...new Set([...h, slug])]; });
+    toast(show ? 'Shown on the storefront' : 'Hidden from the storefront');
+    return;
+  }
   if (!t.matches || !t.matches('[data-dsel],[data-dall]')) return;
   if (t.matches('[data-dall]')) { $$('[data-dsel]').forEach(b => { if (t.checked) dspSel.add(b.dataset.dsel); else dspSel.delete(b.dataset.dsel); }); }
   else if (t.checked) dspSel.add(t.dataset.dsel); else dspSel.delete(t.dataset.dsel);
@@ -4132,7 +4234,7 @@ function batchNote(b) {
 /* ---------- Render ---------- */
 /* The sidebar follows the core loop: share products, take preorders, source them, then receive and fulfil them */
 const NAV = [['home', 'Home', '#home', 'home', null],
-  ['products', 'Products', '#products', 'box', 'share'], ['batches', 'Batches', '#batches', 'batches', 'share'], ['shopify', 'Shopify', '#shopify', 'store', 'share'],
+  ['products', 'Products', '#products', 'box', 'share'], ['batches', 'Batches', '#batches', 'batches', 'share'], ['storefront', 'Storefront', '#storefront', 'link', 'share'], ['shopify', 'Shopify', '#shopify', 'store', 'share'],
   ['orders', 'Orders', '#orders', 'orders', 'take'], ['customers', 'Customers', '#customers', 'customers', 'take'],
   ['buy', 'Buy list', '#buy', 'cart', 'source'], ['pos', 'Purchase orders', '#pos', 'doc', 'source'], ['ships', 'Shipments', '#shipments', 'ship', 'source'],
   ['inventory', 'Inventory', '#inventory', 'shelves', 'fulfil'], ['dispatch', 'Dispatch', '#dispatch', 'truck', 'fulfil']];
@@ -4156,7 +4258,7 @@ function render() {
   document.body.classList.toggle('public', pub);
   document.body.classList.toggle('editing', editing);
   $('#public').hidden = !pub; $('#editor').hidden = !editing;
-  if (pub) { $('#public').innerHTML = statusPage(parts[1]); mountStatus(); document.title = `Order #${parts[1]} | ${STORE.name}`; return; }
+  if (pub) { $('#public').innerHTML = statusPage(parts[1], params.get('from')); mountStatus(); document.title = `Order #${parts[1]} | ${STORE.name}`; return; }
   if (editing) {
     if (path === 'orders/new') { $('#editor').innerHTML = orderEditor(); mountOrderEditor(); document.title = 'New order | PreorderDesk'; }
     else { $('#editor').innerHTML = batchEditor(); mountBatchEditor(); document.title = 'New batch | PreorderDesk'; }
@@ -4174,6 +4276,7 @@ function render() {
     case 'customers': html = customersPage(); break;
     case 'customer': html = customerPage(parts[1]); nav = 'customers'; break;
     case 'shopify': html = shopifyPage(); break;
+    case 'storefront': html = storefrontPage(); break;
     case 'buy': html = buyPage(); break;
     case 'pos': html = posPage(); break;
     case 'po': html = poPage(decodeURIComponent(parts[1] || '')); nav = 'pos'; break;
@@ -4202,11 +4305,12 @@ function render() {
   document.title = 'PreorderDesk';
 }
 window.addEventListener('hashchange', () => { if (modal) closeModal(); render(); window.scrollTo(0, 0); });
-window.addEventListener('storage', e => { if (e.key === KEY) { S = load(); ensureDeliveries(); ensureShopify(); ensureStock(); ensureSupply(); syncSupply(); render(); } });
+window.addEventListener('storage', e => { if (e.key === KEY) { S = load(); ensureDeliveries(); ensureShopify(); ensureStock(); ensureSupply(); ensureStorefront(); syncSupply(); render(); } });
 ensureDeliveries();
 ensureShopify();
 ensureStock();
 if (ensureSupply()) save();
+if (ensureStorefront()) save();
 syncSupply();
 render();
 </script>
